@@ -15,31 +15,29 @@
 package graph
 
 type OCEdge struct {
-	id       int
 	from, to *OCNode
 	label    string
 	Properties
-	graph *OCGraph
 }
 
-func (edge *OCEdge) GetGraph() Graph  { return edge.graph }
+func (edge *OCEdge) GetGraph() Graph  { return edge.from.graph }
 func (edge *OCEdge) GetLabel() string { return edge.label }
 func (edge *OCEdge) GetFrom() Node    { return edge.from }
 func (edge *OCEdge) GetTo() Node      { return edge.to }
 
 func (edge *OCEdge) SetLabel(label string) {
-	edge.graph.SetEdgeLabel(edge, label)
+	edge.from.graph.SetEdgeLabel(edge, label)
 }
 
 func (edge *OCEdge) SetProperty(key string, value interface{}) {
-	edge.graph.SetEdgeProperty(edge, key, value)
+	edge.from.graph.SetEdgeProperty(edge, key, value)
 }
 
 func (edge *OCEdge) RemoveProperty(key string) {
-	edge.graph.RemoveEdgeProperty(edge, key)
+	edge.from.graph.RemoveEdgeProperty(edge, key)
 }
 
 // Remove an edge
 func (edge *OCEdge) Remove() {
-	edge.graph.RemoveEdge(edge)
+	edge.from.graph.RemoveEdge(edge)
 }

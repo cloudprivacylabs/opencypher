@@ -101,6 +101,7 @@ type Node interface {
 
 	GetLabels() StringSet
 	SetLabels(StringSet)
+	HasLabel(string) bool
 
 	GetProperty(string) (interface{}, bool)
 	SetProperty(string, interface{})

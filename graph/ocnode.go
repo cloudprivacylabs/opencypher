@@ -20,14 +20,14 @@ import (
 )
 
 type OCNode struct {
-	id     int
 	labels StringSet
 	Properties
 	graph *OCGraph
 }
 
-func (node *OCNode) GetGraph() Graph      { return node.graph }
-func (node *OCNode) GetLabels() StringSet { return node.labels.Clone() }
+func (node *OCNode) GetGraph() Graph        { return node.graph }
+func (node *OCNode) GetLabels() StringSet   { return node.labels.Clone() }
+func (node *OCNode) HasLabel(s string) bool { return node.labels.Has(s) }
 
 // Returns an edge iterator for incoming or outgoing edges
 func (node *OCNode) GetEdges(dir EdgeDir) EdgeIterator {

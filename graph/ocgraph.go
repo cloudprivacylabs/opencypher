@@ -15,9 +15,8 @@
 package graph
 
 type OCGraph struct {
-	index  *graphIndex
-	store  OCStore
-	idBase int
+	index *graphIndex
+	store OCStore
 }
 
 func NewOCGraph() *OCGraph {
@@ -34,8 +33,7 @@ func (g *OCGraph) NewNode(labels []string, properties map[string]interface{}) No
 
 // NewOCNode creates a new node with the given labels and properties
 func (g *OCGraph) NewOCNode(labels []string, properties map[string]interface{}) *OCNode {
-	node := &OCNode{id: g.idBase, labels: NewStringSet(labels...), Properties: Properties(properties), graph: g}
-	g.idBase++
+	node := &OCNode{labels: NewStringSet(labels...), Properties: Properties(properties), graph: g}
 	g.addNode(node)
 	return node
 }
@@ -102,14 +100,11 @@ func (g *OCGraph) NewEdge(from, to Node, label string, properties map[string]int
 		panic("to node is not in graph")
 	}
 	newEdge := &OCEdge{
-		id:         g.idBase,
 		from:       ofrom,
 		to:         oto,
 		label:      label,
 		Properties: Properties(properties),
-		graph:      g,
 	}
-	g.idBase++
 	g.store.AddEdge(newEdge)
 	return newEdge
 }
