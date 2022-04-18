@@ -1,7 +1,5 @@
 package opencypher
 
-import ()
-
 func (literal IntLiteral) Evaluate(ctx *EvalContext) (Value, error) {
 	return Value{
 		Value:    int(literal),

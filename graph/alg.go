@@ -1,7 +1,5 @@
 package graph
 
-import ()
-
 // Sources finds all the source nodes in the graph
 func SourcesItr(graph Graph) NodeIterator {
 	return &nodeIterator{

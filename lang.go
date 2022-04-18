@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
-	"github.com/cloudprivacylabs/opencypher/parser"
 	"github.com/cloudprivacylabs/opencypher/graph"
+	"github.com/cloudprivacylabs/opencypher/parser"
 )
 
 //go:generate antlr4 -Dlanguage=Go Cypher.g4 -o parser

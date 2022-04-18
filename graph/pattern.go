@@ -14,8 +14,6 @@
 
 package graph
 
-import ()
-
 type ErrNodeVariableExpected string
 
 func (e ErrNodeVariableExpected) Error() string {
@@ -340,7 +338,7 @@ func (pattern Pattern) getFastestElement(graph Graph, symbols map[string]*Patter
 	index := 0
 	var itr Iterator
 	for i := range pattern {
-		sz := -1
+		var sz int
 		var t Iterator
 		if (i % 2) == 0 {
 			t, sz = pattern[i].estimateNodeSize(graph, symbols)
