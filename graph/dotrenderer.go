@@ -7,7 +7,7 @@ import (
 
 // DOTRenderer renders a graph in Graphviz dot format
 type DOTRenderer struct {
-	// NodeRenderer renderes a node. If the node is to be excluded, returns false.
+	// NodeRenderer renders a node. If the node is to be excluded, returns false.
 	NodeRenderer func(string, Node, io.Writer) (bool, error)
 	// EdgeRenderer renders an edge. The from and to nodes are rendered
 	// if this is called. If the edge is to be excluded, returns false
