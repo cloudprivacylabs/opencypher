@@ -21,9 +21,6 @@ type Store interface {
 	DetachRemoveNode(node *OCNode)
 	AddEdge(edge *OCEdge)
 	RemoveEdge(edge *OCEdge)
-	GetNodeEdges(node *OCNode, dir EdgeDir) EdgeIterator
-	GetNodeEdgesWithLabel(node *OCNode, dir EdgeDir, label string) EdgeIterator
-	GetNodeEdgesWithAnyLabel(node *OCNode, dir EdgeDir, set StringSet) EdgeIterator
 	NumNodes() int
 	GetNodes() NodeIterator
 	GetEdges() EdgeIterator
@@ -34,16 +31,10 @@ type Store interface {
 type OCStore struct {
 	allNodes NodeSet
 	allEdges EdgeMap
-
-	incoming map[*OCNode]EdgeMap
-	outgoing map[*OCNode]EdgeMap
 }
 
 func NewOCStore() *OCStore {
-	return &OCStore{
-		incoming: make(map[*OCNode]EdgeMap),
-		outgoing: make(map[*OCNode]EdgeMap),
-	}
+	return &OCStore{}
 }
 
 func (store *OCStore) AddNode(node *OCNode) {
@@ -51,14 +42,14 @@ func (store *OCStore) AddNode(node *OCNode) {
 }
 
 func (store *OCStore) DetachNode(node *OCNode) {
-	for _, e := range EdgeSlice(store.incoming[node].Iterator()) {
+	for _, e := range EdgeSlice(node.incoming.Iterator()) {
 		store.RemoveEdge(e.(*OCEdge))
 	}
-	delete(store.incoming, node)
-	for _, e := range EdgeSlice(store.outgoing[node].Iterator()) {
+	node.incoming.Clear()
+	for _, e := range EdgeSlice(node.outgoing.Iterator()) {
 		store.RemoveEdge(e.(*OCEdge))
 	}
-	delete(store.outgoing, node)
+	node.outgoing.Clear()
 }
 
 func (store *OCStore) DetachRemoveNode(node *OCNode) {
@@ -76,33 +67,6 @@ func (store *OCStore) AddEdge(edge *OCEdge) {
 func (store *OCStore) RemoveEdge(edge *OCEdge) {
 	store.disconnect(edge)
 	store.allEdges.Remove(edge)
-}
-
-func (store *OCStore) GetNodeEdges(node *OCNode, dir EdgeDir) EdgeIterator {
-	if dir == IncomingEdge {
-		return store.incoming[node].Iterator()
-	}
-	return store.outgoing[node].Iterator()
-}
-
-func (store *OCStore) GetNodeEdgesWithLabel(node *OCNode, dir EdgeDir, label string) EdgeIterator {
-	if dir == IncomingEdge {
-		return store.incoming[node].IteratorLabel(label)
-	}
-	return store.outgoing[node].IteratorLabel(label)
-}
-
-func (store *OCStore) GetNodeEdgesWithAnyLabel(node *OCNode, dir EdgeDir, set StringSet) EdgeIterator {
-	if dir == IncomingEdge {
-		if len(set) == 0 {
-			return store.incoming[node].Iterator()
-		}
-		return store.incoming[node].IteratorAnyLabel(set)
-	}
-	if len(set) == 0 {
-		return store.outgoing[node].Iterator()
-	}
-	return store.outgoing[node].IteratorAnyLabel(set)
 }
 
 func (store *OCStore) NumNodes() int {
@@ -126,23 +90,11 @@ func (store *OCStore) GetEdgesWithAnyLabel(set StringSet) EdgeIterator {
 }
 
 func (store *OCStore) connect(edge *OCEdge) {
-	in := store.incoming[edge.to]
-	in.Add(edge)
-	store.incoming[edge.to] = in
-	out := store.outgoing[edge.from]
-	out.Add(edge)
-	store.outgoing[edge.from] = out
+	edge.to.incoming.Add(edge)
+	edge.from.outgoing.Add(edge)
 }
 
 func (store *OCStore) disconnect(edge *OCEdge) {
-	in := store.incoming[edge.to]
-	in.Remove(edge)
-	if in.IsEmpty() {
-		delete(store.incoming, edge.to)
-	}
-	out := store.outgoing[edge.from]
-	out.Remove(edge)
-	if out.IsEmpty() {
-		delete(store.outgoing, edge.from)
-	}
+	edge.to.incoming.Remove(edge)
+	edge.from.outgoing.Remove(edge)
 }

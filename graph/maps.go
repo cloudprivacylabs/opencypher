@@ -26,6 +26,11 @@ type EdgeMap struct {
 	n int
 }
 
+func (em *EdgeMap) Clear() {
+	em.m = linkedhashmap.New()
+	em.n = 0
+}
+
 func (em *EdgeMap) Add(edge *OCEdge) {
 	if em.m == nil {
 		em.m = linkedhashmap.New()

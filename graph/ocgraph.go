@@ -175,21 +175,6 @@ func (g *OCGraph) GetEdgesWithAnyLabel(set StringSet) EdgeIterator {
 	return g.store.GetEdgesWithAnyLabel(set)
 }
 
-func (g *OCGraph) GetNodeEdges(node Node, dir EdgeDir) EdgeIterator {
-	onode := node.(*OCNode)
-	return g.store.GetNodeEdges(onode, dir)
-}
-
-func (g *OCGraph) GetNodeEdgesWithLabel(node Node, dir EdgeDir, label string) EdgeIterator {
-	onode := node.(*OCNode)
-	return g.store.GetNodeEdgesWithLabel(onode, dir, label)
-}
-
-func (g *OCGraph) GetNodeEdgesWithAnyLabel(node Node, dir EdgeDir, set StringSet) EdgeIterator {
-	onode := node.(*OCNode)
-	return g.store.GetNodeEdgesWithAnyLabel(onode, dir, set)
-}
-
 // FindNodes returns an iterator that will iterate through all the
 // nodes that have all of the given labels and properties. If
 // allLabels is nil or empty, it does not look at the labels. If

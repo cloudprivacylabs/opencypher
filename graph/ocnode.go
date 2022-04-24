@@ -22,7 +22,9 @@ import (
 type OCNode struct {
 	labels StringSet
 	Properties
-	graph *OCGraph
+	graph    *OCGraph
+	incoming EdgeMap
+	outgoing EdgeMap
 }
 
 func (node *OCNode) GetGraph() Graph        { return node.graph }
@@ -31,17 +33,32 @@ func (node *OCNode) HasLabel(s string) bool { return node.labels.Has(s) }
 
 // Returns an edge iterator for incoming or outgoing edges
 func (node *OCNode) GetEdges(dir EdgeDir) EdgeIterator {
-	return node.graph.GetNodeEdges(node, dir)
+	if dir == IncomingEdge {
+		return node.incoming.Iterator()
+	}
+	return node.outgoing.Iterator()
 }
 
 // Returns an edge iterator for incoming or outgoing edges with the given label
 func (node *OCNode) GetEdgesWithLabel(dir EdgeDir, label string) EdgeIterator {
-	return node.graph.GetNodeEdgesWithLabel(node, dir, label)
+	if dir == IncomingEdge {
+		return node.incoming.IteratorLabel(label)
+	}
+	return node.outgoing.IteratorLabel(label)
 }
 
 // Returns an edge iterator for incoming or outgoingn edges that has the given labels
 func (node *OCNode) GetEdgesWithAnyLabel(dir EdgeDir, labels StringSet) EdgeIterator {
-	return node.graph.GetNodeEdgesWithAnyLabel(node, dir, labels)
+	if dir == IncomingEdge {
+		if len(labels) == 0 {
+			return node.incoming.Iterator()
+		}
+		return node.incoming.IteratorAnyLabel(labels)
+	}
+	if len(labels) == 0 {
+		return node.outgoing.Iterator()
+	}
+	return node.outgoing.IteratorAnyLabel(labels)
 }
 
 func (node *OCNode) SetLabels(labels StringSet) {
