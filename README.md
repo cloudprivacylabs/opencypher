@@ -8,6 +8,9 @@ implementation and a labeled property graph implementation. The
 labeled property graph package can be used independently from the
 openCypher library.
 
+This Go module is part of the [Layered Schema
+Architecture](https://layeredschemas.org).
+
 ## Labeled Property Graph
 
 This labeled property graph package implements the openCypher model of
@@ -33,8 +36,21 @@ g := graph.NewOCGraph()
 n1 := g.NewNode([]string{"label1"},map[string]interface{}{"prop": "value1" })
 n2 := g.NewNode([]string{"label2"},map[string]interface{}{"prop": "value2" })
 // Connect the two nodes with an edge
-g.NewEdge(n1,n2,"relatedTo",nil)
+edge:=g.NewEdge(n1,n2,"relatedTo",nil)
 ```
+
+The LPG library uses an iterator model to address nodes and edges
+because the underlying algorithm to collect nodes and edges mathcing a
+certain criteria may depend on the existence of indexes. Both incoming
+and outgoing edges of nodes are accessible:
+
+```
+for edges:=n1.GetEdges(graph.OutgoingEdge); edges.Next(); {
+  edge:=edges.Edge()
+  // edge.GetTo() and edge.GetFrom() are the adjacent nodes
+}
+```
+
 
 The graph indexes nodes by label, so access to nodes using labels is
 fast. You can add additional indexes on properties:
@@ -52,7 +68,12 @@ slowNodes:= g.GetNodesWithProperty("propWithoutIndex")
 ```
 
 Graph library supports searching patterns. The following example
-searches for the pattern that match `(:label1) -[]->({prop:value})`,
+searches for the pattern that match 
+
+```
+(:label1) -[]->({prop:value})`
+```
+
 and returns the head nodes for every matching path:
 
 ```
@@ -71,5 +92,21 @@ pattern := graph.Pattern{
    Properties: map[string]interface{} {"prop":"value"},
  }}
 nodes, err:=pattern.FindNodes(g,nil)
+```
+
+## openCypher
+
+At this point, this library provides partial support for openCypher
+expressions. More support will be added as needed.
+
+openCypher expressions are evaluated using an evaluation context. 
+
+```
+ectx:=NewEvalContext(grph)
+val, err:=opencypher.ParseAndEvaluate(`match (n:label) return n`,ctx)
+resultSet:=val.Value.(opencypher.ResultSet)
+for _,row:=range resultSet.Rows {
+  node:=row[n].Value.(graph.Node)
+}
 ```
 
