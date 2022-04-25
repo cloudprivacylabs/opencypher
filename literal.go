@@ -1,5 +1,9 @@
 package opencypher
 
+import (
+	"strings"
+)
+
 func (literal IntLiteral) Evaluate(ctx *EvalContext) (Value, error) {
 	return Value{
 		Value:    int(literal),
@@ -107,4 +111,36 @@ func (r *RangeLiteral) Evaluate(ctx *EvalContext) (from, to *int, err error) {
 		to = &i
 	}
 	return
+}
+
+// EscapeLabelLiteral escape a literal that can be used as a label. It
+// returns `s`
+func EscapeLabelLiteral(s string) string {
+	return "`" + s + "`"
+}
+
+// EscapePropertyKeyLiteral escapes a literal that can be used as a
+// property key. Returns `s`
+func EscapePropertyKeyLiteral(s string) string {
+	return "`" + s + "`"
+}
+
+// EscapeStringLiteral returns "s" where backslashes and quotes in s
+// are escaped
+func EscapeStringLiteral(s string) string {
+	bld := strings.Builder{}
+	bld.WriteRune('"')
+	for _, c := range s {
+		if c == '\\' {
+			bld.WriteRune('\\')
+			bld.WriteRune('\\')
+		} else if c == '"' {
+			bld.WriteRune('\\')
+			bld.WriteRune('"')
+		} else {
+			bld.WriteRune(c)
+		}
+	}
+	bld.WriteRune('"')
+	return bld.String()
 }
