@@ -45,8 +45,8 @@ func (p *Properties) ForEachProperty(f func(string, interface{}) bool) bool {
 	return true
 }
 
-// ComparePropertyValue compares a and b. They both must be of the
-// same type. Supported types are
+// ComparePropertyValue compares a and b. They must be
+// comparable. Supported types are
 //
 //   int
 //   string
@@ -58,6 +58,7 @@ func (p *Properties) ForEachProperty(f func(string, interface{}) bool) bool {
 //
 // If one of the values implement GetNativeValue() method, then it is
 // called to get the underlying value
+//
 func ComparePropertyValue(a, b interface{}) int {
 
 	type withNativeValue interface {

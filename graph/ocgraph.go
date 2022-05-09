@@ -365,13 +365,18 @@ func (g *OCGraph) FindEdges(labels StringSet, properties map[string]interface{})
 // nodes that have all the specified labels, with correct property
 // values
 func GetNodeFilterFunc(labels StringSet, properties map[string]interface{}) func(Node) bool {
-	return func(node Node) bool {
+	return func(node Node) (cmp bool) {
 		onode := node.(*OCNode)
 		if len(labels) > 0 {
 			if !onode.labels.HasAllSet(labels) {
 				return false
 			}
 		}
+		defer func() {
+			if r := recover(); r != nil {
+				cmp = false
+			}
+		}()
 		for k, v := range properties {
 			nodeValue, exists := onode.GetProperty(k)
 			if !exists {
@@ -391,13 +396,18 @@ func GetNodeFilterFunc(labels StringSet, properties map[string]interface{}) func
 // that have at least one of the specified labels, with correct
 // property values
 func GetEdgeFilterFunc(labels StringSet, properties map[string]interface{}) func(Edge) bool {
-	return func(edge Edge) bool {
+	return func(edge Edge) (cmp bool) {
 		oedge := edge.(*OCEdge)
 		if len(labels) > 0 {
 			if !labels.Has(oedge.label) {
 				return false
 			}
 		}
+		defer func() {
+			if r := recover(); r != nil {
+				cmp = false
+			}
+		}()
 		for k, v := range properties {
 			edgeValue, exists := oedge.GetProperty(k)
 			if !exists {
@@ -418,11 +428,17 @@ type WithProperties interface {
 }
 
 func buildPropertyFilterFunc(key string, value interface{}) func(WithProperties) bool {
-	return func(properties WithProperties) bool {
+	return func(properties WithProperties) (cmp bool) {
 		pvalue, exists := properties.GetProperty(key)
 		if !exists {
 			return value == nil
 		}
+
+		defer func() {
+			if r := recover(); r != nil {
+				cmp = false
+			}
+		}()
 		return ComparePropertyValue(value, pvalue) == 0
 	}
 }
