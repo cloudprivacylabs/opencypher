@@ -272,25 +272,35 @@ func (part PatternPart) Create(ctx *EvalContext) error {
 	if err != nil {
 		return err
 	}
+	edges := make([]graph.Edge, 0)
 	for _, pathPart := range part.Path {
 		_, targetNode, err := pathPart.Node.Create(ctx)
 		if err != nil {
 			return err
 		}
-		if err := pathPart.Rel.Create(ctx, lastNode, targetNode); err != nil {
+		edge, err := pathPart.Rel.Create(ctx, lastNode, targetNode)
+		if err != nil {
 			return err
 		}
+		edges = append(edges, edge)
 		lastNode = targetNode
+	}
+	if part.Var != nil {
+		if len(edges) == 0 {
+			ctx.SetVar(string(*part.Var), ValueOf(lastNode))
+		} else {
+			ctx.SetVar(string(*part.Var), ValueOf(edges))
+		}
 	}
 	return nil
 }
 
-func (rel RelationshipPattern) Create(ctx *EvalContext, from, to graph.Node) error {
+func (rel RelationshipPattern) Create(ctx *EvalContext, from, to graph.Node) (graph.Edge, error) {
 	if rel.Range != nil {
-		return fmt.Errorf("Cannot specify range in CREATE")
+		return nil, fmt.Errorf("Cannot specify range in CREATE")
 	}
 	if rel.RelTypes != nil && len(rel.RelTypes.Rel) > 1 {
-		return fmt.Errorf("Multiple labels for an edge")
+		return nil, fmt.Errorf("Multiple labels for an edge")
 	}
 	var varName string
 	if rel.Var != nil {
@@ -299,7 +309,7 @@ func (rel RelationshipPattern) Create(ctx *EvalContext, from, to graph.Node) err
 		_, err := ctx.GetVar(varName)
 		if err == nil {
 			// Var is defined already.
-			return fmt.Errorf("Cannot refer to an edge in CREATE")
+			return nil, fmt.Errorf("Cannot refer to an edge in CREATE")
 		}
 	}
 	var label string
@@ -308,7 +318,7 @@ func (rel RelationshipPattern) Create(ctx *EvalContext, from, to graph.Node) err
 	}
 	properties, err := rel.Properties.getPropertiesMap(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var edge graph.Edge
 	if rel.Backwards {
@@ -319,5 +329,5 @@ func (rel RelationshipPattern) Create(ctx *EvalContext, from, to graph.Node) err
 	if len(varName) > 0 {
 		ctx.SetVar(varName, ValueOf([]graph.Edge{edge}))
 	}
-	return nil
+	return edge, nil
 }

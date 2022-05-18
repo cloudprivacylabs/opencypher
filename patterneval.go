@@ -74,6 +74,7 @@ func (acc *matchResultAccumulator) StoreResult(ctx *graph.MatchContext, path int
 	result := make(map[string]Value)
 	for k, v := range symbols {
 		result[k] = RValue{Value: v}
+		acc.evalCtx.SetVar(k, RValue{Value: v})
 	}
 	acc.result.Append(result)
 }
@@ -130,20 +131,6 @@ func (match Match) GetResults(ctx *EvalContext) (ResultSet, error) {
 		return true
 	})
 
-	// // Fill resultset with missing data
-	// for _, row := range resultAccumulator.result.Rows {
-	// 	for _, pattern := range patterns {
-	// 		for _, item := range pattern {
-	// 			if len(item.Name) > 0 {
-	// 				if _, exists := row[item.Name]; exists {
-	// 					continue
-	// 				}
-	// 				row[item.Name] = RValue{}
-	// 			}
-	// 		}
-	// 	}
-	// }
-	// return resultAccumulator.result, nil
 	return rs, err
 }
 

@@ -357,5 +357,8 @@ RETURN p`, NewEvalContext(g))
 	if err != nil {
 		t.Error(err)
 	}
+	if g.NumNodes() != 3 {
+		t.Errorf("Not 3 nodes")
+	}
 
 }
