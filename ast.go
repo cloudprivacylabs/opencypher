@@ -28,6 +28,42 @@ type SinglePartQuery struct {
 	Return *ReturnClause
 }
 
+type Create struct {
+	Pattern Pattern
+}
+
+type Delete struct {
+	Detach bool
+	Exprs  []Expression
+}
+
+type Remove struct {
+	Items []RemoveItem
+}
+
+type RemoveItem struct {
+	Variable   *Variable
+	NodeLabels NodeLabels
+	Property   *PropertyExpression
+}
+
+type Set struct {
+	Items []SetItem
+}
+
+type SetItem struct {
+	Property   *PropertyExpression
+	Variable   *Variable
+	Op         string
+	Expression Expression
+	NodeLabels NodeLabels
+}
+
+type PropertyExpression struct {
+	Atom   Atom
+	Lookup []SchemaName
+}
+
 type MultiPartQueryPart struct {
 	Read   []ReadingClause
 	Update []UpdatingClause
@@ -49,7 +85,8 @@ type ReadingClause interface {
 }
 
 type UpdatingClause interface {
-	Evaluatable
+	Update(*EvalContext, ResultSet) (Value, error)
+	TopLevelUpdate(*EvalContext) error
 }
 
 type Expression interface {
@@ -88,32 +125,32 @@ type AddOrSubtractExpression struct {
 	Add []MultiplyDivideModuloExpression
 	Sub []MultiplyDivideModuloExpression
 
-	constValue *Value
+	constValue Value
 }
 
 type MultiplyDivideModuloExpression struct {
 	Parts []MultiplyDivideModuloExpressionPart
 
-	constValue *Value
+	constValue Value
 }
 
 type MultiplyDivideModuloExpressionPart struct {
 	// For the first element of parts, Op=0
 	Op   rune
-	Expr PowerOfExpression
+	Expr Evaluatable
 }
 
 type PowerOfExpression struct {
-	Parts []UnaryAddOrSubtractExpression
+	Parts []Evaluatable
 
-	constValue *Value
+	constValue Value
 }
 
 type UnaryAddOrSubtractExpression struct {
 	Neg  bool
 	Expr StringListNullOperatorExpression
 
-	constValue *Value
+	constValue Value
 }
 
 type StringListNullOperatorExpression struct {
@@ -317,13 +354,13 @@ type RangeLiteral struct {
 type ListLiteral struct {
 	Values []Expression
 
-	constValue *Value
+	constValue Value
 }
 
 type MapLiteral struct {
 	KeyValues []MapKeyValue
 
-	constValue *Value
+	constValue Value
 }
 
 type MapKeyValue struct {
@@ -646,15 +683,18 @@ func oC_MultiplyDivideModuloExpression(ctx *parser.OC_MultiplyDivideModuloExpres
 
 // oC_PowerOfExpression :
 //          oC_UnaryAddOrSubtractExpression ( SP? '^' SP? oC_UnaryAddOrSubtractExpression )* ;
-func oC_PowerOfExpression(ctx *parser.OC_PowerOfExpressionContext) PowerOfExpression {
+func oC_PowerOfExpression(ctx *parser.OC_PowerOfExpressionContext) Evaluatable {
 	ret := PowerOfExpression{}
 	for _, x := range ctx.AllOC_UnaryAddOrSubtractExpression() {
 		ret.Parts = append(ret.Parts, oC_UnaryAddOrSubtractExpression(x.(*parser.OC_UnaryAddOrSubtractExpressionContext)))
 	}
-	return ret
+	if len(ret.Parts) == 1 {
+		return ret.Parts[0]
+	}
+	return &ret
 }
 
-func oC_UnaryAddOrSubtractExpression(ctx *parser.OC_UnaryAddOrSubtractExpressionContext) UnaryAddOrSubtractExpression {
+func oC_UnaryAddOrSubtractExpression(ctx *parser.OC_UnaryAddOrSubtractExpressionContext) Evaluatable {
 	ret := UnaryAddOrSubtractExpression{}
 	for child := 0; child < ctx.GetChildCount(); child++ {
 		ch := ctx.GetChild(child)
@@ -666,7 +706,10 @@ func oC_UnaryAddOrSubtractExpression(ctx *parser.OC_UnaryAddOrSubtractExpression
 			ret.Expr = oC_StringListNullOperatorExpression(expr)
 		}
 	}
-	return ret
+	if !ret.Neg {
+		return ret.Expr
+	}
+	return &ret
 }
 
 func oC_StringListNullOperatorExpression(ctx *parser.OC_StringListNullOperatorExpressionContext) StringListNullOperatorExpression {
@@ -1220,28 +1263,104 @@ func oC_Unwind(ctx *parser.OC_UnwindContext) Unwind {
 	}
 }
 
+func oC_Set(ctx *parser.OC_SetContext) UpdatingClause {
+	ret := &Set{}
+	for _, item := range ctx.AllOC_SetItem() {
+		ret.Items = append(ret.Items, oC_SetItem(item.(*parser.OC_SetItemContext)))
+	}
+	return ret
+}
+
+func oC_SetItem(ctx *parser.OC_SetItemContext) SetItem {
+	if p := ctx.OC_PropertyExpression(); p != nil {
+		pe := oC_PropertyExpression(p.(*parser.OC_PropertyExpressionContext))
+		return SetItem{
+			Property:   &pe,
+			Expression: oC_Expression(ctx.OC_Expression().(*parser.OC_ExpressionContext)),
+		}
+	}
+	v := oC_Variable(ctx.OC_Variable().(*parser.OC_VariableContext))
+	if expr := ctx.OC_Expression(); expr != nil {
+		ret := SetItem{
+			Variable:   &v,
+			Expression: oC_Expression(expr.(*parser.OC_ExpressionContext)),
+		}
+		for i := 0; i < ctx.GetChildCount(); i++ {
+			ch := ctx.GetChild(i)
+			if term, ok := ch.(antlr.TerminalNode); ok {
+				text := term.GetText()
+				if text == "=" || text == "+=" {
+					ret.Op = text
+					break
+				}
+			}
+		}
+		return ret
+	}
+	ret := SetItem{
+		Variable:   &v,
+		NodeLabels: oC_NodeLabels(ctx.OC_NodeLabels().(*parser.OC_NodeLabelsContext)),
+	}
+	return ret
+}
+
+func oC_PropertyExpression(ctx *parser.OC_PropertyExpressionContext) PropertyExpression {
+	ret := PropertyExpression{
+		Atom: oC_Atom(ctx.OC_Atom().(*parser.OC_AtomContext)),
+	}
+	for _, l := range ctx.AllOC_PropertyLookup() {
+		ret.Lookup = append(ret.Lookup, oC_PropertyLookup(l.(*parser.OC_PropertyLookupContext)))
+	}
+	return ret
+}
+
+func oC_Delete(ctx *parser.OC_DeleteContext) UpdatingClause {
+	ret := Delete{
+		Detach: ctx.DETACH() != nil,
+	}
+	for _, e := range ctx.AllOC_Expression() {
+		ret.Exprs = append(ret.Exprs, oC_Expression(e.(*parser.OC_ExpressionContext)))
+	}
+	return ret
+}
+
+func oC_Remove(ctx *parser.OC_RemoveContext) UpdatingClause {
+	ret := Remove{}
+	for _, item := range ctx.AllOC_RemoveItem() {
+		ret.Items = append(ret.Items, oC_RemoveItem(item.(*parser.OC_RemoveItemContext)))
+	}
+	return ret
+}
+
+func oC_RemoveItem(ctx *parser.OC_RemoveItemContext) RemoveItem {
+	ret := RemoveItem{}
+	if v := ctx.OC_Variable(); v != nil {
+		variable := oC_Variable(v.(*parser.OC_VariableContext))
+		ret.Variable = &variable
+	}
+	if v := ctx.OC_NodeLabels(); v != nil {
+		ret.NodeLabels = oC_NodeLabels(v.(*parser.OC_NodeLabelsContext))
+	}
+	if v := ctx.OC_PropertyExpression(); v != nil {
+		expr := oC_PropertyExpression(v.(*parser.OC_PropertyExpressionContext))
+		ret.Property = &expr
+	}
+	return ret
+}
+
+func oC_Create(ctx *parser.OC_CreateContext) UpdatingClause {
+	ret := Create{
+		Pattern: oC_Pattern(ctx.OC_Pattern().(*parser.OC_PatternContext)),
+	}
+	return ret
+}
+
 func oC_InQueryCall(ctx *parser.OC_InQueryCallContext) ReadingClause {
 	panic("Unsupported: inQueryCall")
 }
 
-func oC_Create(ctx *parser.OC_CreateContext) Evaluatable {
-	panic("Unsupported: create")
-}
-
-func oC_Merge(ctx *parser.OC_MergeContext) Evaluatable {
+func oC_Merge(ctx *parser.OC_MergeContext) UpdatingClause {
 	panic("Unsupported: merge")
-}
-
-func oC_Delete(ctx *parser.OC_DeleteContext) Evaluatable {
-	panic("Unsupported: delete")
-}
-
-func oC_Set(ctx *parser.OC_SetContext) Evaluatable {
-	panic("Unsupported: set")
-}
-
-func oC_Remove(ctx *parser.OC_RemoveContext) Evaluatable {
-	panic("Unsupported: remove")
 }
 
 func oC_StandaloneCall(ctx *parser.OC_StandaloneCallContext) Evaluatable {

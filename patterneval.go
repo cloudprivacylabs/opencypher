@@ -18,7 +18,7 @@ func (properties Properties) AsLiteral(ctx *EvalContext) ([]MapKeyValue, error) 
 		if err != nil {
 			return nil, err
 		}
-		lit, ok := param.Value.(map[string]Value)
+		lit, ok := param.Get().(map[string]Value)
 		if !ok {
 			return nil, ErrPropertiesParameterExpected
 		}
@@ -60,7 +60,7 @@ func (acc *matchResultAccumulator) StoreResult(ctx *graph.MatchContext, path int
 			acc.err = err
 			return
 		}
-		if b, _ := rs.AsBool(); !b {
+		if b, _ := ValueAsBool(rs); !b {
 			return
 		}
 	}
@@ -73,38 +73,65 @@ func (acc *matchResultAccumulator) StoreResult(ctx *graph.MatchContext, path int
 	}
 	result := make(map[string]Value)
 	for k, v := range symbols {
-		result[k] = Value{Value: v}
+		result[k] = RValue{Value: v}
+		acc.evalCtx.SetVar(k, RValue{Value: v})
 	}
 	acc.result.Append(result)
 }
 
 func (match Match) GetResults(ctx *EvalContext) (ResultSet, error) {
-	if len(match.Pattern.Parts) > 1 {
-		panic("Multiple match patterns are not implemented")
+	patterns := make([]graph.Pattern, 0, len(match.Pattern.Parts))
+	for i := range match.Pattern.Parts {
+		p, err := match.Pattern.Parts[i].getPattern(ctx)
+		if err != nil {
+			return ResultSet{}, err
+		}
+		patterns = append(patterns, p)
 	}
-	pattern, err := match.Pattern.Parts[0].getPattern(ctx)
-	if err != nil {
-		return ResultSet{}, err
-	}
-
 	newContext := ctx.SubContext()
 
-	symbols, err := BuildPatternSymbols(ctx, pattern)
-	if err != nil {
-		return ResultSet{}, err
+	results := make([]matchResultAccumulator, len(patterns))
+	for i := range patterns {
+		results[i].evalCtx = newContext
+		symbols, err := BuildPatternSymbols(ctx, patterns[i])
+		if err != nil {
+			return ResultSet{}, err
+		}
+
+		err = patterns[i].Run(ctx.graph, symbols, &results[i])
+		if err != nil {
+			return ResultSet{}, err
+		}
 	}
 
-	resultAccumulator := matchResultAccumulator{
-		where:   match.Where,
-		evalCtx: newContext,
+	resultSets := make([]ResultSet, 0, len(patterns))
+	for _, r := range results {
+		resultSets = append(resultSets, r.result)
 	}
+	var err error
+	// Build resultset from results
+	rs := CartesianProduct(resultSets, match.Optional, func(row map[string]Value) bool {
+		if match.Where == nil {
+			return true
+		}
+		if err != nil {
+			return false
+		}
+		for k, v := range row {
+			newContext.SetVar(k, v)
+		}
+		rs, e := match.Where.Evaluate(newContext)
+		if e != nil {
+			err = e
+			return false
+		}
+		if b, _ := ValueAsBool(rs); !b {
+			return false
+		}
+		return true
+	})
 
-	err = pattern.Run(ctx.graph, symbols, &resultAccumulator)
-	if err != nil {
-		return ResultSet{}, err
-	}
-
-	return resultAccumulator.result, nil
+	return rs, err
 }
 
 // BuildPatternSymbols copies all the symbols referenced in the
@@ -120,7 +147,7 @@ func BuildPatternSymbols(ctx *EvalContext, pattern graph.Pattern) (map[string]*g
 		ps := &graph.PatternSymbol{}
 		// A variable with the same name exists
 		// Must be a Node, or []Edge
-		switch val := value.Value.(type) {
+		switch val := value.Get().(type) {
 		case graph.Node:
 			ps.AddNode(val)
 		case []graph.Edge:
@@ -170,7 +197,7 @@ func (np NodePattern) getPattern(ctx *EvalContext) (graph.PatternItem, error) {
 	if len(props) > 0 {
 		ret.Properties = make(map[string]interface{})
 		for k, v := range props {
-			ret.Properties[k] = v.Value
+			ret.Properties[k] = v.Get()
 		}
 	}
 	return ret, nil
@@ -211,7 +238,7 @@ func (rp RelationshipPattern) getPattern(ctx *EvalContext) (graph.PatternItem, e
 	if len(props) > 0 {
 		ret.Properties = make(map[string]interface{})
 		for k, v := range props {
-			ret.Properties[k] = v.Value
+			ret.Properties[k] = v.Get()
 		}
 	}
 	return ret, nil
@@ -263,7 +290,7 @@ func (p *Properties) getPattern(ctx *EvalContext) (map[string]Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		m, ok := value.Value.(map[string]Value)
+		m, ok := value.Get().(map[string]Value)
 		if !ok {
 			return nil, ErrPropertiesParameterExpected
 		}
@@ -274,7 +301,7 @@ func (p *Properties) getPattern(ctx *EvalContext) (map[string]Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		m, ok := value.Value.(map[string]Value)
+		m, ok := value.Get().(map[string]Value)
 		if !ok {
 			return nil, ErrPropertiesExpected
 		}
@@ -282,4 +309,19 @@ func (p *Properties) getPattern(ctx *EvalContext) (map[string]Value, error) {
 	}
 
 	return nil, nil
+}
+
+func (p *Properties) getPropertiesMap(ctx *EvalContext) (map[string]interface{}, error) {
+	var properties map[string]interface{}
+	if p != nil {
+		propertiesAsValue, err := p.getPattern(ctx)
+		if err != nil {
+			return nil, err
+		}
+		properties = make(map[string]interface{})
+		for k, v := range propertiesAsValue {
+			properties[k] = v.Get()
+		}
+	}
+	return properties, nil
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/cloudprivacylabs/opencypher/graph"
 )
 
-// Value represents a computer value. Possible data types it can contain are:
+// Value represents a computed value. Possible data types it can contain are:
 //
 //   primitives:
 //    int
@@ -28,92 +28,135 @@ import (
 //    Node
 //    []Edge
 //    ResultSet
-type Value struct {
-	Value    interface{}
-	Constant bool
+
+type Value interface {
+	Evaluatable
+	Get() interface{}
+	IsConst() bool
 }
 
-// IsPrimitive returns true if the value is int, float64, bool,
+// LValue is a pointer to a value
+type LValue struct {
+	getter func() interface{}
+	setter func(interface{})
+}
+
+func (v LValue) Get() interface{}                     { return v.getter() }
+func (v LValue) Set(val interface{})                  { v.setter(val) }
+func (LValue) IsConst() bool                          { return false }
+func (v LValue) Evaluate(*EvalContext) (Value, error) { return v, nil }
+
+// NewLValue returns an LValue from the given value
+func NewLValue(v Value) LValue {
+	l, ok := v.(LValue)
+	if ok {
+		return l
+	}
+	r := v.(RValue)
+	return LValue{
+		getter: func() interface{} {
+			return r.Value
+		},
+		setter: func(toValue interface{}) {
+			r.Value = toValue
+		},
+	}
+}
+
+// RValue is a value
+type RValue struct {
+	Value interface{}
+	Const bool
+}
+
+func (v RValue) Get() interface{}                     { return v.Value }
+func (v RValue) IsConst() bool                        { return v.Const }
+func (v RValue) Evaluate(*EvalContext) (Value, error) { return v, nil }
+
+// IsValuePrimitive returns true if the value is int, float64, bool,
 // string, duration, date, datetime, localDateTime, or localTime
-func (v Value) IsPrimitive() bool {
-	switch v.Value.(type) {
+func IsValuePrimitive(v Value) bool {
+	switch v.Get().(type) {
 	case int, float64, bool, string, neo4j.Duration, neo4j.Date, neo4j.LocalDateTime, neo4j.LocalTime:
 		return true
 	}
 	return false
 }
 
-// AsBool returns the bool value, or if it is not bool, false,false
-func (v Value) AsBool() (bool, bool) {
-	if b, ok := v.Value.(bool); ok {
+// ValueAsBool returns the bool value, or if it is not bool, false,false
+func ValueAsBool(v Value) (bool, bool) {
+	if b, ok := v.Get().(bool); ok {
 		return b, true
 	}
 	return false, false
 }
 
 func ValueOf(in interface{}) Value {
+	if in == nil {
+		return RValue{}
+	}
 	switch v := in.(type) {
 	case Value:
 		return v
 	case int8:
-		return Value{Value: int(v)}
+		return RValue{Value: int(v)}
 	case int16:
-		return Value{Value: int(v)}
+		return RValue{Value: int(v)}
 	case int32:
-		return Value{Value: int(v)}
+		return RValue{Value: int(v)}
 	case int64:
-		return Value{Value: int(v)}
+		return RValue{Value: int(v)}
 	case int:
-		return Value{Value: v}
+		return RValue{Value: v}
 	case uint8:
-		return Value{Value: int(v)}
+		return RValue{Value: int(v)}
 	case uint16:
-		return Value{Value: int(v)}
+		return RValue{Value: int(v)}
 	case uint32:
-		return Value{Value: int(v)}
+		return RValue{Value: int(v)}
 	case string:
-		return Value{Value: v}
+		return RValue{Value: v}
 	case bool:
-		return Value{Value: v}
+		return RValue{Value: v}
 	case float64:
-		return Value{Value: v}
+		return RValue{Value: v}
 	case float32:
-		return Value{Value: float64(v)}
+		return RValue{Value: float64(v)}
 	case neo4j.Duration:
-		return Value{Value: v}
+		return RValue{Value: v}
 	case neo4j.Date:
-		return Value{Value: v}
+		return RValue{Value: v}
 	case neo4j.LocalDateTime:
-		return Value{Value: v}
+		return RValue{Value: v}
 	case neo4j.LocalTime:
-		return Value{Value: v}
+		return RValue{Value: v}
 	case graph.Node:
-		return Value{Value: v}
+		return RValue{Value: v}
 	case []graph.Edge:
-		return Value{Value: v}
+		return RValue{Value: v}
 	case []Value:
-		return Value{Value: v}
+		return RValue{Value: v}
 	case map[string]Value:
-		return Value{Value: v}
+		return RValue{Value: v}
 	case graph.StringSet:
-		return Value{Value: v}
+		return RValue{Value: v}
 	}
 	panic(fmt.Sprintf("Invalid value: %v %T", in, in))
 }
 
-// IsSame compares two values and decides if the two are the same
-func (v Value) IsSame(v2 Value) bool {
-	if v.IsPrimitive() {
-		if v2.IsPrimitive() {
-			eq, err := comparePrimitiveValues(v.Value, v2.Value)
+// IsValueSame compares two values and decides if the two are the same
+func IsValueSame(v, v2 Value) bool {
+	if IsValuePrimitive(v) {
+		if IsValuePrimitive(v2) {
+			eq, err := comparePrimitiveValues(v.Get(), v2.Get())
 			return err != nil && eq == 0
 		}
 		return false
 	}
 
-	switch val1 := v.Value.(type) {
+	switch val1 := v.Get().(type) {
 	case []Value:
-		val2, ok := v2.Value.([]Value)
+		val2, ok := v2.Get().([]Value)
 		if !ok {
 			return false
 		}
@@ -121,14 +164,14 @@ func (v Value) IsSame(v2 Value) bool {
 			return false
 		}
 		for i := range val1 {
-			if !val1[i].IsSame(val2[i]) {
+			if !IsValueSame(val1[i], val2[i]) {
 				return false
 			}
 		}
 		return true
 
 	case map[string]Value:
-		val2, ok := v2.Value.(map[string]Value)
+		val2, ok := v2.Get().(map[string]Value)
 		if !ok {
 			return false
 		}
@@ -140,14 +183,14 @@ func (v Value) IsSame(v2 Value) bool {
 			if !ok {
 				return false
 			}
-			if !v.IsSame(v2) {
+			if !IsValueSame(v, v2) {
 				return false
 			}
 		}
 		return true
 
 	case graph.StringSet:
-		val2, ok := v2.Value.(graph.StringSet)
+		val2, ok := v2.Get().(graph.StringSet)
 		if !ok {
 			return false
 		}
@@ -162,14 +205,14 @@ func (v Value) IsSame(v2 Value) bool {
 		return true
 
 	case graph.Node:
-		val2, ok := v2.Value.(graph.Node)
+		val2, ok := v2.Get().(graph.Node)
 		if !ok {
 			return false
 		}
 		return val1 == val2
 
 	case []graph.Edge:
-		val2, ok := v2.Value.([]graph.Edge)
+		val2, ok := v2.Get().([]graph.Edge)
 		if !ok {
 			return false
 		}
@@ -186,13 +229,11 @@ func (v Value) IsSame(v2 Value) bool {
 	return false
 }
 
-func (v Value) Evaluate(ctx *EvalContext) (Value, error) { return v, nil }
-
-func (v Value) String() string {
+func (v RValue) String() string {
 	if v.Value == nil {
 		return "null"
 	}
-	if v.IsPrimitive() {
+	if IsValuePrimitive(v) {
 		return fmt.Sprint(v.Value)
 	}
 	switch val := v.Value.(type) {

@@ -9,66 +9,79 @@ import (
 
 func (expr *UnaryAddOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	if expr.constValue != nil {
-		return *expr.constValue, nil
+		return expr.constValue, nil
 	}
 
 	value, err := expr.Expr.Evaluate(ctx)
 	if err != nil {
-		return value, err
+		return nil, err
 	}
-	if value.Value == nil {
+	// If the value is  an lvalue, preserve lvalue status
+	if !expr.Neg {
 		return value, nil
 	}
-	if expr.Neg {
-		if intValue, ok := value.Value.(int); ok {
-			value.Value = -intValue
-		} else if floatValue, ok := value.Value.(float64); ok {
-			value.Value = -floatValue
-		} else {
-			return value, ErrInvalidUnaryOperation
-		}
+	// From now on, it is an rvalue
+	ret := RValue{Const: value.IsConst()}
+	val := value.Get()
+	if val == nil {
+		return ret, nil
 	}
-	if value.Constant {
-		expr.constValue = &value
+	if intValue, ok := val.(int); ok {
+		ret.Value = -intValue
+	} else if floatValue, ok := val.(float64); ok {
+		ret.Value = -floatValue
+	} else {
+		return ret, ErrInvalidUnaryOperation
 	}
-	return value, nil
+	if ret.IsConst() {
+		expr.constValue = &ret
+	}
+	return ret, nil
 }
 
 func (expr *PowerOfExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	if expr.constValue != nil {
-		return *expr.constValue, nil
+		return expr.constValue, nil
 	}
-	var ret Value
-	for i := range expr.Parts {
+	val, err := expr.Parts[0].Evaluate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(expr.Parts) == 1 {
+		return val, nil
+	}
+	// ret is an rvalue
+	ret := RValue{
+		Value: val.Get(),
+		Const: val.IsConst(),
+	}
+	for i := 1; 1 < len(expr.Parts); i++ {
 		val, err := expr.Parts[i].Evaluate(ctx)
 		if err != nil {
-			return val, err
+			return nil, err
 		}
-		if val.Value == nil {
-			return Value{}, nil
+		v := val.Get()
+		if v == nil {
+			return RValue{}, nil
 		}
-		if i == 0 {
-			ret = val
+		var valValue float64
+		if intValue, ok := v.(int); ok {
+			valValue = float64(intValue)
+		} else if floatValue, ok := v.(float64); ok {
+			valValue = floatValue
 		} else {
-			var valValue float64
-			if intValue, ok := val.Value.(int); ok {
-				valValue = float64(intValue)
-			} else if floatValue, ok := val.Value.(float64); ok {
-				valValue = floatValue
-			} else {
-				return Value{}, ErrInvalidPowerOperation
-			}
-			if i, ok := ret.Value.(int); ok {
-				ret.Value = math.Pow(float64(i), valValue)
-			} else if f, ok := ret.Value.(float64); ok {
-				ret.Value = math.Pow(f, valValue)
-			} else {
-				return Value{}, ErrInvalidPowerOperation
-			}
-			ret.Constant = ret.Constant && val.Constant
+			return RValue{}, ErrInvalidPowerOperation
 		}
+		if i, ok := ret.Value.(int); ok {
+			ret.Value = math.Pow(float64(i), valValue)
+		} else if f, ok := ret.Value.(float64); ok {
+			ret.Value = math.Pow(f, valValue)
+		} else {
+			return RValue{}, ErrInvalidPowerOperation
+		}
+		ret.Const = ret.Const && val.IsConst()
 	}
-	if ret.Constant {
+	if ret.Const {
 		expr.constValue = &ret
 	}
 	return ret, nil
@@ -186,10 +199,20 @@ func mulfloatdur(a float64, b neo4j.Duration, op rune) (neo4j.Duration, error) {
 
 func (expr *MultiplyDivideModuloExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	if expr.constValue != nil {
-		return *expr.constValue, nil
+		return expr.constValue, nil
 	}
-
-	var ret Value
+	if len(expr.Parts) == 1 {
+		v, err := expr.Parts[0].Expr.Evaluate(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if v.IsConst() {
+			expr.constValue = v
+		}
+		return v, err
+	}
+	// Multiple parts, cannot be an lvalue
+	var ret RValue
 	var err error
 	for i := range expr.Parts {
 		var val Value
@@ -198,15 +221,16 @@ func (expr *MultiplyDivideModuloExpression) Evaluate(ctx *EvalContext) (Value, e
 			return val, err
 		}
 		if i == 0 {
-			ret = val
+			ret.Value = val.Get()
+			ret.Const = val.IsConst()
 		} else {
 			if ret.Value == nil {
-				return Value{}, nil
+				return RValue{}, nil
 			}
-			ret.Constant = ret.Constant && val.Constant
+			ret.Const = ret.Const && val.IsConst()
 			switch result := ret.Value.(type) {
 			case int:
-				switch operand := val.Value.(type) {
+				switch operand := val.Get().(type) {
 				case int:
 					ret.Value, err = mulintint(result, operand, expr.Parts[i].Op)
 				case float64:
@@ -217,7 +241,7 @@ func (expr *MultiplyDivideModuloExpression) Evaluate(ctx *EvalContext) (Value, e
 					err = ErrInvalidMultiplicativeOperation
 				}
 			case float64:
-				switch operand := val.Value.(type) {
+				switch operand := val.Get().(type) {
 				case int:
 					ret.Value, err = mulfloatint(result, operand, expr.Parts[i].Op)
 				case float64:
@@ -228,7 +252,7 @@ func (expr *MultiplyDivideModuloExpression) Evaluate(ctx *EvalContext) (Value, e
 					err = ErrInvalidMultiplicativeOperation
 				}
 			case neo4j.Duration:
-				switch operand := val.Value.(type) {
+				switch operand := val.Get().(type) {
 				case int:
 					ret.Value, err = muldurint(result, int64(operand), expr.Parts[i].Op)
 				case float64:
@@ -242,9 +266,9 @@ func (expr *MultiplyDivideModuloExpression) Evaluate(ctx *EvalContext) (Value, e
 		}
 	}
 	if err != nil {
-		return Value{}, err
+		return nil, err
 	}
-	if ret.Constant {
+	if ret.Const {
 		expr.constValue = &ret
 	}
 	return ret, nil
@@ -337,18 +361,18 @@ func adddurdur(a neo4j.Duration, b neo4j.Duration, sub bool) (neo4j.Duration, er
 	return neo4j.DurationOf(a.Months()+b.Months(), a.Days()+b.Days(), a.Seconds()+b.Seconds(), a.Nanos()+b.Nanos()), nil
 }
 
-func addlistlist(a, b []Value) Value {
+func addlistlist(a, b []Value) RValue {
 	arr := make([]Value, 0, len(a)+len(b))
-	ret := Value{Constant: true}
+	ret := RValue{Const: true}
 	for _, x := range a {
-		if !x.Constant {
-			ret.Constant = false
+		if !x.IsConst() {
+			ret.Const = false
 		}
 		arr = append(arr, x)
 	}
 	for _, x := range b {
-		if !x.Constant {
-			ret.Constant = false
+		if !x.IsConst() {
+			ret.Const = false
 		}
 		arr = append(arr, x)
 	}
@@ -357,23 +381,34 @@ func addlistlist(a, b []Value) Value {
 
 func (expr *AddOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	if expr.constValue != nil {
-		return *expr.constValue, nil
+		return expr.constValue, nil
+	}
+	if len(expr.Add) == 1 && len(expr.Sub) == 0 {
+		ret, err := expr.Add[0].Evaluate(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if ret.IsConst() {
+			expr.constValue = ret
+		}
+		return ret, nil
 	}
 
-	var ret Value
+	var ret RValue
 	first := true
 
 	accumulate := func(operand Value, sub bool) error {
 		if first {
 			first = false
-			ret = operand
+			ret.Value = operand.Get()
+			ret.Const = operand.IsConst()
 			return nil
 		}
-		ret.Constant = ret.Constant && operand.Constant
+		ret.Const = ret.Const && operand.IsConst()
 		var err error
 		switch retValue := ret.Value.(type) {
 		case int:
-			switch operandValue := operand.Value.(type) {
+			switch operandValue := operand.Get().(type) {
 			case int:
 				ret.Value = addintint(retValue, operandValue, sub)
 			case float64:
@@ -382,7 +417,7 @@ func (expr *AddOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
 				err = ErrInvalidAdditiveOperation
 			}
 		case float64:
-			switch operandValue := operand.Value.(type) {
+			switch operandValue := operand.Get().(type) {
 			case int:
 				ret.Value = addfloatint(retValue, operandValue, sub)
 			case float64:
@@ -391,14 +426,14 @@ func (expr *AddOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
 				err = ErrInvalidAdditiveOperation
 			}
 		case string:
-			switch operandValue := operand.Value.(type) {
+			switch operandValue := operand.Get().(type) {
 			case string:
 				ret.Value, err = addstringstring(retValue, operandValue, sub)
 			default:
 				err = ErrInvalidAdditiveOperation
 			}
 		case neo4j.Duration:
-			switch operandValue := operand.Value.(type) {
+			switch operandValue := operand.Get().(type) {
 			case neo4j.Duration:
 				ret.Value, err = adddurdur(retValue, operandValue, sub)
 			case neo4j.Date:
@@ -411,21 +446,21 @@ func (expr *AddOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
 				err = ErrInvalidAdditiveOperation
 			}
 		case neo4j.Date:
-			switch operandValue := operand.Value.(type) {
+			switch operandValue := operand.Get().(type) {
 			case neo4j.Duration:
 				ret.Value = adddatedur(retValue, operandValue, sub)
 			default:
 				err = ErrInvalidAdditiveOperation
 			}
 		case neo4j.LocalTime:
-			switch operandValue := operand.Value.(type) {
+			switch operandValue := operand.Get().(type) {
 			case neo4j.Duration:
 				ret.Value = addtimedur(retValue, operandValue, sub)
 			default:
 				err = ErrInvalidAdditiveOperation
 			}
 		case neo4j.LocalDateTime:
-			switch operandValue := operand.Value.(type) {
+			switch operandValue := operand.Get().(type) {
 			case neo4j.Duration:
 				ret.Value = adddatetimedur(retValue, operandValue, sub)
 			default:
@@ -435,7 +470,7 @@ func (expr *AddOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
 			if sub {
 				return ErrInvalidAdditiveOperation
 			}
-			switch operandValue := operand.Value.(type) {
+			switch operandValue := operand.Get().(type) {
 			case []Value:
 				ret = addlistlist(retValue, operandValue)
 			default:
@@ -448,22 +483,22 @@ func (expr *AddOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	for i := range expr.Add {
 		val, err := expr.Add[i].Evaluate(ctx)
 		if err != nil {
-			return Value{}, err
+			return RValue{}, err
 		}
 		if err = accumulate(val, false); err != nil {
-			return Value{}, err
+			return RValue{}, err
 		}
 	}
 	for i := range expr.Sub {
 		val, err := expr.Add[i].Evaluate(ctx)
 		if err != nil {
-			return Value{}, err
+			return RValue{}, err
 		}
 		if err = accumulate(val, true); err != nil {
-			return Value{}, err
+			return RValue{}, err
 		}
 	}
-	if ret.Constant {
+	if ret.Const {
 		expr.constValue = &ret
 	}
 	return ret, nil

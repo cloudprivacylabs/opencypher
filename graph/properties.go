@@ -207,7 +207,7 @@ func ComparePropertyValue(a, b interface{}) int {
 func (p Properties) String() string {
 	elements := make([]string, 0, len(p))
 	for k, v := range p {
-		elements = append(elements, fmt.Sprintf("%s:%s", k, v))
+		elements = append(elements, fmt.Sprintf("%s:%v", k, v))
 	}
 	return "{" + strings.Join(elements, " ") + "}"
 }

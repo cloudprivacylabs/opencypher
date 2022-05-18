@@ -52,7 +52,7 @@ func Parse(input string) (Evaluatable, error) {
 func ParseAndEvaluate(input string, ctx *EvalContext) (Value, error) {
 	e, err := Parse(input)
 	if err != nil {
-		return Value{}, err
+		return nil, err
 	}
 	return e.Evaluate(ctx)
 }
@@ -87,7 +87,7 @@ func ParsePatternExpr(expr string) (PatternPart, error) {
 // node. It may return zero or more nodes reached from the node
 func (p PatternPart) FindRelative(this graph.Node) ([]graph.Node, error) {
 	ctx := NewEvalContext(this.GetGraph())
-	ctx.SetVar("this", Value{Value: this})
+	ctx.SetVar("this", RValue{Value: this})
 	pattern, err := p.getPattern(ctx)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (p PatternPart) FindRelative(this graph.Node) ([]graph.Node, error) {
 		if !ok {
 			continue
 		}
-		if n, ok := t.Value.(graph.Node); ok {
+		if n, ok := t.Get().(graph.Node); ok {
 			ret = append(ret, n)
 		}
 	}
