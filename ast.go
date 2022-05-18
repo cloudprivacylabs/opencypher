@@ -109,7 +109,7 @@ type AndExpression struct {
 }
 
 type NotExpression struct {
-	Part ComparisonExpression
+	Part Expression
 }
 type ComparisonExpression struct {
 	First  Expression
@@ -118,12 +118,12 @@ type ComparisonExpression struct {
 
 type PartialComparisonExpression struct {
 	Op   string
-	Expr AddOrSubtractExpression
+	Expr Expression
 }
 
 type AddOrSubtractExpression struct {
-	Add []MultiplyDivideModuloExpression
-	Sub []MultiplyDivideModuloExpression
+	Add []Expression
+	Sub []Expression
 
 	constValue Value
 }
@@ -584,6 +584,9 @@ func oC_OrExpression(ctx *parser.OC_OrExpressionContext) Expression {
 	for _, x := range ctx.AllOC_XorExpression() {
 		ret.Parts = append(ret.Parts, oC_XorExpression(x.(*parser.OC_XorExpressionContext)))
 	}
+	if len(ret.Parts) == 1 {
+		return ret.Parts[0]
+	}
 	return ret
 }
 
@@ -592,6 +595,9 @@ func oC_XorExpression(ctx *parser.OC_XorExpressionContext) Expression {
 	for _, x := range ctx.AllOC_AndExpression() {
 		ret.Parts = append(ret.Parts, oC_AndExpression(x.(*parser.OC_AndExpressionContext)))
 	}
+	if len(ret.Parts) == 1 {
+		return ret.Parts[0]
+	}
 	return ret
 }
 
@@ -599,6 +605,9 @@ func oC_AndExpression(ctx *parser.OC_AndExpressionContext) Expression {
 	ret := AndExpression{}
 	for _, x := range ctx.AllOC_NotExpression() {
 		ret.Parts = append(ret.Parts, oC_NotExpression(x.(*parser.OC_NotExpressionContext)))
+	}
+	if len(ret.Parts) == 1 {
+		return ret.Parts[0]
 	}
 	return ret
 }
@@ -612,12 +621,15 @@ func oC_NotExpression(ctx *parser.OC_NotExpressionContext) Expression {
 	return oC_ComparisonExpression(ctx.OC_ComparisonExpression().(*parser.OC_ComparisonExpressionContext))
 }
 
-func oC_ComparisonExpression(ctx *parser.OC_ComparisonExpressionContext) ComparisonExpression {
+func oC_ComparisonExpression(ctx *parser.OC_ComparisonExpressionContext) Expression {
 	ret := ComparisonExpression{
 		First: oC_AddOrSubtractExpression(ctx.OC_AddOrSubtractExpression().(*parser.OC_AddOrSubtractExpressionContext)),
 	}
 	for _, x := range ctx.AllOC_PartialComparisonExpression() {
 		ret.Second = append(ret.Second, oC_PartialComparisonExpression(x.(*parser.OC_PartialComparisonExpressionContext)))
+	}
+	if len(ret.Second) == 0 {
+		return ret.First
 	}
 	return ret
 }
@@ -628,7 +640,7 @@ func oC_ComparisonExpression(ctx *parser.OC_ComparisonExpressionContext) Compari
 //           ( SP? '-' SP? oC_MultiplyDivideModuloExpression )
 //      )*
 //
-func oC_AddOrSubtractExpression(ctx *parser.OC_AddOrSubtractExpressionContext) *AddOrSubtractExpression {
+func oC_AddOrSubtractExpression(ctx *parser.OC_AddOrSubtractExpressionContext) Expression {
 	ret := &AddOrSubtractExpression{}
 	target := &ret.Add
 	count := ctx.GetChildCount()
@@ -648,6 +660,9 @@ func oC_AddOrSubtractExpression(ctx *parser.OC_AddOrSubtractExpressionContext) *
 			}
 		}
 	}
+	if len(ret.Add) == 1 && len(ret.Sub) == 0 {
+		return ret.Add[0]
+	}
 	return ret
 }
 
@@ -656,8 +671,8 @@ func oC_AddOrSubtractExpression(ctx *parser.OC_AddOrSubtractExpressionContext) *
 //          ( SP? '*' SP? oC_PowerOfExpression ) |
 //          ( SP? '/' SP? oC_PowerOfExpression ) |
 //          ( SP? '%' SP? oC_PowerOfExpression ) )* ;
-func oC_MultiplyDivideModuloExpression(ctx *parser.OC_MultiplyDivideModuloExpressionContext) MultiplyDivideModuloExpression {
-	ret := MultiplyDivideModuloExpression{}
+func oC_MultiplyDivideModuloExpression(ctx *parser.OC_MultiplyDivideModuloExpressionContext) Expression {
+	ret := &MultiplyDivideModuloExpression{}
 	count := ctx.GetChildCount()
 	var lastOp rune
 	for child := 0; child < count; child++ {
@@ -677,6 +692,9 @@ func oC_MultiplyDivideModuloExpression(ctx *parser.OC_MultiplyDivideModuloExpres
 				}
 			}
 		}
+	}
+	if len(ret.Parts) == 1 {
+		return ret.Parts[0].Expr
 	}
 	return ret
 }
@@ -788,7 +806,7 @@ func oC_PropertyOrLabelsExpression(ctx *parser.OC_PropertyOrLabelsExpressionCont
 }
 
 func oC_PartialComparisonExpression(ctx *parser.OC_PartialComparisonExpressionContext) PartialComparisonExpression {
-	ret := PartialComparisonExpression{Expr: *oC_AddOrSubtractExpression(ctx.OC_AddOrSubtractExpression().(*parser.OC_AddOrSubtractExpressionContext))}
+	ret := PartialComparisonExpression{Expr: oC_AddOrSubtractExpression(ctx.OC_AddOrSubtractExpression().(*parser.OC_AddOrSubtractExpressionContext))}
 	for i := 0; i < ctx.GetChildCount(); i++ {
 		if tok, ok := ctx.GetChild(i).(antlr.TerminalNode); ok {
 			t := tok.GetText()
