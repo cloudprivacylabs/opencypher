@@ -28,6 +28,10 @@ type SinglePartQuery struct {
 	Return *ReturnClause
 }
 
+type Create struct {
+	Pattern Pattern
+}
+
 type Delete struct {
 	Detach bool
 	Exprs  []Expression
@@ -82,6 +86,7 @@ type ReadingClause interface {
 
 type UpdatingClause interface {
 	Update(*EvalContext, ResultSet) (Value, error)
+	TopLevelUpdate(*EvalContext) error
 }
 
 type Expression interface {
@@ -1343,12 +1348,15 @@ func oC_RemoveItem(ctx *parser.OC_RemoveItemContext) RemoveItem {
 	return ret
 }
 
-func oC_InQueryCall(ctx *parser.OC_InQueryCallContext) ReadingClause {
-	panic("Unsupported: inQueryCall")
+func oC_Create(ctx *parser.OC_CreateContext) UpdatingClause {
+	ret := Create{
+		Pattern: oC_Pattern(ctx.OC_Pattern().(*parser.OC_PatternContext)),
+	}
+	return ret
 }
 
-func oC_Create(ctx *parser.OC_CreateContext) UpdatingClause {
-	panic("Unsupported: create")
+func oC_InQueryCall(ctx *parser.OC_InQueryCallContext) ReadingClause {
+	panic("Unsupported: inQueryCall")
 }
 
 func oC_Merge(ctx *parser.OC_MergeContext) UpdatingClause {

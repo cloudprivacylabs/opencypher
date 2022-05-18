@@ -99,39 +99,39 @@ func ValueOf(in interface{}) Value {
 	case Value:
 		return v
 	case int8:
-		return RValue{Value: int(v), Const: true}
+		return RValue{Value: int(v)}
 	case int16:
-		return RValue{Value: int(v), Const: true}
+		return RValue{Value: int(v)}
 	case int32:
-		return RValue{Value: int(v), Const: true}
+		return RValue{Value: int(v)}
 	case int64:
-		return RValue{Value: int(v), Const: true}
+		return RValue{Value: int(v)}
 	case int:
-		return RValue{Value: v, Const: true}
+		return RValue{Value: v}
 	case uint8:
-		return RValue{Value: int(v), Const: true}
+		return RValue{Value: int(v)}
 	case uint16:
-		return RValue{Value: int(v), Const: true}
+		return RValue{Value: int(v)}
 	case uint32:
-		return RValue{Value: int(v), Const: true}
+		return RValue{Value: int(v)}
 	case string:
-		return RValue{Value: v, Const: true}
+		return RValue{Value: v}
 	case bool:
-		return RValue{Value: v, Const: true}
+		return RValue{Value: v}
 	case float64:
-		return RValue{Value: v, Const: true}
+		return RValue{Value: v}
 	case float32:
-		return RValue{Value: float64(v), Const: true}
+		return RValue{Value: float64(v)}
 	case neo4j.Duration:
-		return RValue{Value: v, Const: true}
+		return RValue{Value: v}
 	case neo4j.Date:
-		return RValue{Value: v, Const: true}
+		return RValue{Value: v}
 	case neo4j.LocalDateTime:
-		return RValue{Value: v, Const: true}
+		return RValue{Value: v}
 	case neo4j.LocalTime:
-		return RValue{Value: v, Const: true}
+		return RValue{Value: v}
 	case graph.Node:
-		return RValue{Value: v, Const: true}
+		return RValue{Value: v}
 	case []graph.Edge:
 		return RValue{Value: v}
 	case []Value:

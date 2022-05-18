@@ -372,6 +372,16 @@ func (query RegularQuery) Evaluate(ctx *EvalContext) (Value, error) {
 
 func (query SinglePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 	ret := ResultSet{}
+	project := func(rows []map[string]Value) error {
+		for _, item := range rows {
+			val, err := query.Return.Projection.Items.Project(ctx, item)
+			if err != nil {
+				return err
+			}
+			ret.Rows = append(ret.Rows, val)
+		}
+		return nil
+	}
 	if len(query.Read) > 0 {
 		results := ResultSet{}
 		for _, r := range query.Read {
@@ -391,26 +401,27 @@ func (query SinglePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		if query.Return == nil {
 			return RValue{Value: ResultSet{}}, nil
 		}
-		// Keys keep the order of each key in the result set
-		for _, item := range results.Rows {
-			val, err := query.Return.Projection.Items.Project(ctx, item)
-			if err != nil {
-				return nil, err
-			}
-			ret.Rows = append(ret.Rows, val)
+		err := project(results.Rows)
+		if err != nil {
+			return nil, err
 		}
 		return RValue{Value: ret}, nil
 	}
 
-	if query.Return != nil {
-		val, err := query.Return.Projection.Items.Project(ctx, nil)
-		if err != nil {
+	for _, upd := range query.Update {
+		if err := upd.TopLevelUpdate(ctx); err != nil {
 			return nil, err
 		}
-		ret.Rows = append(ret.Rows, val)
-		return RValue{Value: ret}, nil
 	}
-	return RValue{Value: ResultSet{}}, nil
+	if query.Return == nil {
+		return RValue{Value: ResultSet{}}, nil
+	}
+	val, err := query.Return.Projection.Items.Project(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	ret.Rows = append(ret.Rows, val)
+	return RValue{Value: ret}, nil
 }
 
 func (prj ProjectionItems) Project(ctx *EvalContext, values map[string]Value) (map[string]Value, error) {

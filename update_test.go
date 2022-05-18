@@ -219,3 +219,104 @@ RETURN n.name, labels(n)`, NewEvalContext(g))
 		t.Errorf("Has labels")
 	}
 }
+
+func TestCreate(t *testing.T) {
+
+	// Create one node
+	g := graph.NewOCGraph()
+	_, err := ParseAndEvaluate(`create (n)`, NewEvalContext(g))
+	if err != nil {
+		t.Error(err)
+	}
+	if g.NumNodes() != 1 {
+		t.Errorf("Did not create a node")
+	}
+
+	// Create multiple nodes
+	g = graph.NewOCGraph()
+	_, err = ParseAndEvaluate(`CREATE (n), (m)`, NewEvalContext(g))
+	if err != nil {
+		t.Error(err)
+	}
+	if g.NumNodes() != 2 {
+		t.Errorf("Did not create two nodes")
+	}
+
+	// Create node with label
+	g = graph.NewOCGraph()
+	_, err = ParseAndEvaluate(`CREATE (n:Person)`, NewEvalContext(g))
+	if err != nil {
+		t.Error(err)
+	}
+	if g.NumNodes() != 1 {
+		t.Errorf("Did not create person node")
+	}
+	nodes := g.GetNodes()
+	nodes.Next()
+	if nodes.Node().GetLabels().Slice()[0] != "Person" {
+		t.Errorf("Wrong labels")
+	}
+	// Create node with labels
+	g = graph.NewOCGraph()
+	_, err = ParseAndEvaluate(`CREATE (n:Person:Swedish)`, NewEvalContext(g))
+	if err != nil {
+		t.Error(err)
+	}
+	if g.NumNodes() != 1 {
+		t.Errorf("Did not create person node")
+	}
+	nodes = g.GetNodes()
+	nodes.Next()
+	node := nodes.Node()
+	if !node.GetLabels().Has("Person") || !node.GetLabels().Has("Swedish") {
+		t.Errorf("Wrong labels")
+	}
+
+	// Create with properties
+	g = graph.NewOCGraph()
+	ret, err := ParseAndEvaluate(`CREATE (a:Person {name: 'Andy'})
+RETURN a.name`, NewEvalContext(g))
+	if err != nil {
+		t.Error(err)
+	}
+
+	nodes = g.GetNodes()
+	nodes.Next()
+	node = nodes.Node()
+	if !node.GetLabels().Has("Person") {
+		t.Errorf("Wrong labels")
+	}
+	if s, _ := node.GetProperty("name"); s != "Andy" {
+		t.Errorf("Wrong name")
+	}
+	if ret.Get().(ResultSet).Rows[0]["1"].Get() != "Andy" {
+		t.Errorf("Wrong result: %v", ret)
+	}
+
+	// Create relationship
+	g = graph.NewOCGraph()
+	nodea := g.NewNode([]string{"Person"}, map[string]interface{}{"name": "A"})
+	nodeb := g.NewNode([]string{"Person"}, map[string]interface{}{"name": "B"})
+	ret, err = ParseAndEvaluate(`MATCH
+  (a:Person),
+  (b:Person)
+WHERE a.name = 'A' AND b.name = 'B'
+CREATE (a)-[r:RELTYPE]->(b)
+RETURN r`, NewEvalContext(g))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// There must be an edge between a and b
+	edges := nodea.GetEdges(graph.OutgoingEdge)
+	if !edges.Next() {
+		t.Errorf("No edge")
+	}
+	edge := edges.Edge()
+	if edge.GetTo() != nodeb {
+		t.Errorf("Wrong target")
+	}
+	if edge.GetLabel() != "RELTYPE" {
+		t.Errorf("Wronglabel")
+	}
+}

@@ -27,6 +27,10 @@ func (s *Set) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	return RValue{}, nil
 }
 
+func (s Set) TopLevelUpdate(ctx *EvalContext) error {
+	return fmt.Errorf("Cannot use SET at top level")
+}
+
 func (s *SetItem) update(ctx *EvalContext, data map[string]Value, result ResultSet) (err error) {
 	var exprResult Value
 
@@ -124,6 +128,10 @@ func (s *SetItem) update(ctx *EvalContext, data map[string]Value, result ResultS
 	return nil
 }
 
+func (Delete) TopLevelUpdate(ctx *EvalContext) error {
+	return fmt.Errorf("Cannot use DELETE at top level")
+}
+
 func (d Delete) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	subctx := ctx.SubContext()
 	for _, row := range result.Rows {
@@ -156,6 +164,10 @@ func (d Delete) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 		}
 	}
 	return RValue{Value: ResultSet{}}, nil
+}
+
+func (Remove) TopLevelUpdate(ctx *EvalContext) error {
+	return fmt.Errorf("Cannot use REMOVE at top level")
 }
 
 func (r Remove) Update(ctx *EvalContext, result ResultSet) (Value, error) {
@@ -196,4 +208,116 @@ func (r Remove) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 		}
 	}
 	return RValue{Value: result}, nil
+}
+
+func (c Create) TopLevelUpdate(ctx *EvalContext) error {
+	for _, part := range c.Pattern.Parts {
+		if err := part.Create(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c Create) Update(ctx *EvalContext, result ResultSet) (Value, error) {
+	for _, row := range result.Rows {
+		for k, v := range row {
+			ctx.SetVar(k, v)
+		}
+		if err := c.TopLevelUpdate(ctx); err != nil {
+			return nil, err
+		}
+	}
+	return RValue{Value: result}, nil
+}
+
+func (np NodePattern) Create(ctx *EvalContext) (string, graph.Node, error) {
+	// Is there a variable
+	var varName string
+	if np.Var != nil {
+		varName = string(*np.Var)
+		// Is the var defined already
+		existingNode, err := ctx.GetVar(varName)
+		if err == nil {
+			// Var is defined already. Cannot have labels or properties
+			if np.Labels != nil || np.Properties != nil {
+				return "", nil, fmt.Errorf("Cannot specify labels or properties in bound node of a CREATE statement")
+			}
+			node, ok := existingNode.Get().(graph.Node)
+			if !ok {
+				return "", nil, fmt.Errorf("Not a node: %s", varName)
+			}
+			return varName, node, nil
+		}
+	}
+	labels := graph.NewStringSet()
+	if np.Labels != nil {
+		for _, n := range *np.Labels {
+			labels.Add(n.String())
+		}
+	}
+	properties, err := np.Properties.getPropertiesMap(ctx)
+	if err != nil {
+		return "", nil, err
+	}
+	node := ctx.graph.NewNode(labels.Slice(), properties)
+	if len(varName) > 0 {
+		ctx.SetVar(varName, ValueOf(node))
+	}
+	return varName, node, nil
+}
+
+func (part PatternPart) Create(ctx *EvalContext) error {
+	_, lastNode, err := part.Start.Create(ctx)
+	if err != nil {
+		return err
+	}
+	for _, pathPart := range part.Path {
+		_, targetNode, err := pathPart.Node.Create(ctx)
+		if err != nil {
+			return err
+		}
+		if err := pathPart.Rel.Create(ctx, lastNode, targetNode); err != nil {
+			return err
+		}
+		lastNode = targetNode
+	}
+	return nil
+}
+
+func (rel RelationshipPattern) Create(ctx *EvalContext, from, to graph.Node) error {
+	if rel.Range != nil {
+		return fmt.Errorf("Cannot specify range in CREATE")
+	}
+	if rel.RelTypes != nil && len(rel.RelTypes.Rel) > 1 {
+		return fmt.Errorf("Multiple labels for an edge")
+	}
+	var varName string
+	if rel.Var != nil {
+		varName = string(*rel.Var)
+		// Is the var defined already
+		_, err := ctx.GetVar(varName)
+		if err == nil {
+			// Var is defined already.
+			return fmt.Errorf("Cannot refer to an edge in CREATE")
+		}
+	}
+	var label string
+	if rel.RelTypes != nil && len(rel.RelTypes.Rel) == 1 {
+		label = rel.RelTypes.Rel[0].String()
+	}
+	properties, err := rel.Properties.getPropertiesMap(ctx)
+	if err != nil {
+		return err
+	}
+	var edge graph.Edge
+	if rel.Backwards {
+		edge = ctx.graph.NewEdge(to, from, label, properties)
+	} else {
+		edge = ctx.graph.NewEdge(from, to, label, properties)
+	}
+	if len(varName) > 0 {
+		ctx.SetVar(varName, ValueOf([]graph.Edge{edge}))
+	}
+	return nil
 }

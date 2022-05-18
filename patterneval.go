@@ -323,3 +323,18 @@ func (p *Properties) getPattern(ctx *EvalContext) (map[string]Value, error) {
 
 	return nil, nil
 }
+
+func (p *Properties) getPropertiesMap(ctx *EvalContext) (map[string]interface{}, error) {
+	var properties map[string]interface{}
+	if p != nil {
+		propertiesAsValue, err := p.getPattern(ctx)
+		if err != nil {
+			return nil, err
+		}
+		properties = make(map[string]interface{})
+		for k, v := range propertiesAsValue {
+			properties[k] = v.Get()
+		}
+	}
+	return properties, nil
+}
