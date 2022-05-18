@@ -51,7 +51,7 @@ func (ctx *EvalContext) SetParameter(key string, value Value) *EvalContext {
 func (ctx *EvalContext) GetParameter(key string) (Value, error) {
 	value, ok := ctx.parameters[key]
 	if !ok {
-		return Value{}, ErrUnknownParameter{Key: key}
+		return nil, ErrUnknownParameter{Key: key}
 	}
 	return value, nil
 }
@@ -90,9 +90,15 @@ func (ctx *EvalContext) GetFunction(name []SymbolicName) (Function, error) {
 func (ctx *EvalContext) GetVar(name string) (Value, error) {
 	val, ok := ctx.variables[name]
 	if !ok {
-		return Value{}, ErrUnknownVariable{Name: name}
+		if ctx.parent == nil {
+			return nil, ErrUnknownVariable{Name: name}
+		}
+		return ctx.parent.GetVar(name)
 	}
-	val.Constant = false
+	if rv, ok := val.(RValue); ok {
+		rv.Const = false
+		return rv, nil
+	}
 	return val, nil
 }
 

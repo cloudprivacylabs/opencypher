@@ -5,89 +5,89 @@ import (
 )
 
 func (literal IntLiteral) Evaluate(ctx *EvalContext) (Value, error) {
-	return Value{
-		Value:    int(literal),
-		Constant: true,
+	return RValue{
+		Value: int(literal),
+		Const: true,
 	}, nil
 }
 
 func (literal BooleanLiteral) Evaluate(ctx *EvalContext) (Value, error) {
-	return Value{
-		Value:    bool(literal),
-		Constant: true,
+	return RValue{
+		Value: bool(literal),
+		Const: true,
 	}, nil
 }
 
 func (literal DoubleLiteral) Evaluate(ctx *EvalContext) (Value, error) {
-	return Value{
-		Value:    float64(literal),
-		Constant: true,
+	return RValue{
+		Value: float64(literal),
+		Const: true,
 	}, nil
 }
 
 func (literal StringLiteral) Evaluate(ctx *EvalContext) (Value, error) {
-	return Value{
-		Value:    string(literal),
-		Constant: true,
+	return RValue{
+		Value: string(literal),
+		Const: true,
 	}, nil
 }
 
 func (literal NullLiteral) Evaluate(ctx *EvalContext) (Value, error) {
-	return Value{
-		Constant: true,
+	return RValue{
+		Const: true,
 	}, nil
 }
 
 func (lst *ListLiteral) Evaluate(ctx *EvalContext) (Value, error) {
 	if lst.constValue != nil {
-		return *lst.constValue, nil
+		return lst.constValue, nil
 	}
 	ret := make([]Value, 0, len(lst.Values))
-	var val Value
+	var val RValue
 	for i := range lst.Values {
 		v, err := lst.Values[i].Evaluate(ctx)
 		if err != nil {
-			return Value{}, err
+			return nil, err
 		}
 		if i == 0 {
-			val.Constant = v.Constant
+			val.Const = v.IsConst()
 		} else {
-			val.Constant = val.Constant && v.Constant
+			val.Const = val.Const && v.IsConst()
 		}
 		ret = append(ret, v)
 	}
 	val.Value = ret
-	if val.Constant {
-		lst.constValue = &val
+	if val.IsConst() {
+		lst.constValue = val
 	}
 	return val, nil
 }
 
 func (mp *MapLiteral) Evaluate(ctx *EvalContext) (Value, error) {
 	if mp.constValue != nil {
-		return *mp.constValue, nil
+		return mp.constValue, nil
 	}
-	var val Value
+	var val RValue
 	ret := make(map[string]Value)
 	for i := range mp.KeyValues {
 		keyStr := mp.KeyValues[i].Key
 		if len(keyStr) == 0 {
-			return Value{}, ErrInvalidMapKey
+			return nil, ErrInvalidMapKey
 		}
 		value, err := mp.KeyValues[i].Value.Evaluate(ctx)
 		if err != nil {
-			return Value{}, err
+			return nil, err
 		}
 		ret[keyStr] = value
 		if i == 0 {
-			val.Constant = value.Constant
+			val.Const = value.IsConst()
 		} else {
-			val.Constant = val.Constant && value.Constant
+			val.Const = val.Const && value.IsConst()
 		}
 	}
 	val.Value = ret
-	if val.Constant {
-		mp.constValue = &val
+	if val.IsConst() {
+		mp.constValue = val
 	}
 	return val, nil
 }
@@ -99,7 +99,7 @@ func (r *RangeLiteral) Evaluate(ctx *EvalContext) (from, to *int, err error) {
 		if err != nil {
 			return
 		}
-		i := v.Value.(int)
+		i := v.Get().(int)
 		from = &i
 	}
 	if r.To != nil {
@@ -107,7 +107,7 @@ func (r *RangeLiteral) Evaluate(ctx *EvalContext) (from, to *int, err error) {
 		if err != nil {
 			return
 		}
-		i := v.Value.(int)
+		i := v.Get().(int)
 		to = &i
 	}
 	return

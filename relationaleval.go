@@ -125,81 +125,81 @@ func comparePrimitiveValues(v1, v2 interface{}) (int, error) {
 func (expr ComparisonExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	val, err := expr.First.Evaluate(ctx)
 	if err != nil {
-		return Value{}, err
+		return nil, err
 	}
 
-	if val.Value == nil {
-		return Value{}, nil
+	if val.Get() == nil {
+		return RValue{}, nil
 	}
+	ret := RValue{Value: val.Get(), Const: val.IsConst()}
 	for i := range expr.Second {
 		second, err := expr.Second[i].Expr.Evaluate(ctx)
 		if err != nil {
-			return Value{}, err
+			return nil, err
 		}
-		if second.Value == nil {
-			return Value{}, nil
+		if second.Get() == nil {
+			return RValue{}, nil
 		}
-		result, err := comparePrimitiveValues(val.Value, second.Value)
+		result, err := comparePrimitiveValues(val.Get(), second.Get())
 		if err != nil {
-			return Value{}, err
+			return nil, err
 		}
 		switch expr.Second[i].Op {
 		case "=":
-			val.Value = result == 0
+			ret.Value = result == 0
 		case "<>":
-			val.Value = result != 0
+			ret.Value = result != 0
 		case "<":
-			val.Value = result < 0
+			ret.Value = result < 0
 		case "<=":
-			val.Value = result <= 0
+			ret.Value = result <= 0
 		case ">":
-			val.Value = result > 0
+			ret.Value = result > 0
 		case ">=":
-			val.Value = result >= 0
+			ret.Value = result >= 0
 		}
-		val.Constant = val.Constant && second.Constant
+		ret.Const = ret.Const && second.IsConst()
 	}
-	return val, nil
+	return ret, nil
 }
 
 func (expr NotExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	val, err := expr.Part.Evaluate(ctx)
 	if err != nil {
-		return Value{}, err
+		return nil, err
 	}
-	if val.Value == nil {
-		return Value{}, nil
+	if val.Get() == nil {
+		return RValue{}, nil
 	}
-	value, ok := val.Value.(bool)
+	value, ok := val.Get().(bool)
 	if !ok {
-		return Value{}, ErrNotABooleanExpression
+		return nil, ErrNotABooleanExpression
 	}
-	val.Value = !value
-	return val, nil
+	return RValue{Value: !value, Const: val.IsConst()}, nil
 }
 
 func (expr AndExpression) Evaluate(ctx *EvalContext) (Value, error) {
-	var ret Value
+	var ret RValue
 	for i := range expr.Parts {
 		val, err := expr.Parts[i].Evaluate(ctx)
 		if err != nil {
-			return Value{}, err
+			return nil, err
 		}
-		if val.Value == nil {
-			return Value{}, nil
+		if val.Get() == nil {
+			return RValue{}, nil
 		}
 		if i == 0 {
-			ret = val
+			ret = RValue{Value: val.Get(), Const: val.IsConst()}
 		} else {
 			bval, ok := ret.Value.(bool)
 			if !ok {
-				return Value{}, ErrNotABooleanExpression
+				return nil, ErrNotABooleanExpression
 			}
-			vval, ok := val.Value.(bool)
+			vval, ok := val.Get().(bool)
 			if !ok {
-				return Value{}, ErrNotABooleanExpression
+				return nil, ErrNotABooleanExpression
 			}
-			ret.Constant = ret.Constant && val.Constant
+			ret.Const = ret.Const && val.IsConst()
 			ret.Value = bval && vval
 			if !bval || !vval {
 				break
@@ -210,27 +210,27 @@ func (expr AndExpression) Evaluate(ctx *EvalContext) (Value, error) {
 }
 
 func (expr XorExpression) Evaluate(ctx *EvalContext) (Value, error) {
-	var ret Value
+	var ret RValue
 	for i := range expr.Parts {
 		val, err := expr.Parts[i].Evaluate(ctx)
 		if err != nil {
-			return Value{}, err
+			return nil, err
 		}
-		if val.Value == nil {
-			return Value{}, nil
+		if val.Get() == nil {
+			return RValue{}, nil
 		}
 		if i == 0 {
-			ret = val
+			ret = RValue{Value: val.Get(), Const: val.IsConst()}
 		} else {
 			bval, ok := ret.Value.(bool)
 			if !ok {
-				return Value{}, ErrNotABooleanExpression
+				return nil, ErrNotABooleanExpression
 			}
-			vval, ok := val.Value.(bool)
+			vval, ok := val.Get().(bool)
 			if !ok {
-				return Value{}, ErrNotABooleanExpression
+				return nil, ErrNotABooleanExpression
 			}
-			ret.Constant = ret.Constant && val.Constant
+			ret.Const = ret.Const && val.IsConst()
 			ret.Value = bval != vval
 		}
 	}
@@ -238,27 +238,27 @@ func (expr XorExpression) Evaluate(ctx *EvalContext) (Value, error) {
 }
 
 func (expr OrExpression) Evaluate(ctx *EvalContext) (Value, error) {
-	var ret Value
+	var ret RValue
 	for i := range expr.Parts {
 		val, err := expr.Parts[i].Evaluate(ctx)
 		if err != nil {
-			return Value{}, err
+			return nil, err
 		}
-		if val.Value == nil {
-			return Value{}, nil
+		if val.Get() == nil {
+			return RValue{}, nil
 		}
 		if i == 0 {
-			ret = val
+			ret = RValue{Value: val.Get(), Const: val.IsConst()}
 		} else {
 			bval, ok := ret.Value.(bool)
 			if !ok {
-				return Value{}, ErrNotABooleanExpression
+				return nil, ErrNotABooleanExpression
 			}
-			vval, ok := val.Value.(bool)
+			vval, ok := val.Get().(bool)
 			if !ok {
-				return Value{}, ErrNotABooleanExpression
+				return nil, ErrNotABooleanExpression
 			}
-			ret.Constant = ret.Constant && val.Constant
+			ret.Const = ret.Const && val.IsConst()
 			ret.Value = bval || vval
 			if bval || vval {
 				break
