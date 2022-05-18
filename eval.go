@@ -247,7 +247,16 @@ func (pl PropertyOrLabelsExpression) Evaluate(ctx *EvalContext) (Value, error) {
 		if val.Value == nil {
 			return RValue{}, nil
 		}
-		if wp, ok := val.Value.(withProperty); ok {
+		wp, ok := val.Value.(withProperty)
+		if !ok {
+			if edges, ed := val.Value.([]graph.Edge); ed {
+				if len(edges) == 1 {
+					wp = edges[0]
+					ok = true
+				}
+			}
+		}
+		if ok {
 			prop, ok := wp.GetProperty(property.String())
 			if !ok {
 				return RValue{}, nil

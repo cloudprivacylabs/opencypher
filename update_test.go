@@ -319,4 +319,43 @@ RETURN r`, NewEvalContext(g))
 	if edge.GetLabel() != "RELTYPE" {
 		t.Errorf("Wronglabel")
 	}
+
+	// Create a relationship and set properties
+	g = graph.NewOCGraph()
+	nodea = g.NewNode([]string{"Person"}, map[string]interface{}{"name": "A"})
+	nodeb = g.NewNode([]string{"Person"}, map[string]interface{}{"name": "B"})
+	ret, err = ParseAndEvaluate(`MATCH
+  (a:Person),
+  (b:Person)
+WHERE a.name = 'A' AND b.name = 'B'
+CREATE (a)-[r:RELTYPE {name: a.name + '<->' + b.name}]->(b)
+RETURN  r.name`, NewEvalContext(g))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// There must be an edge between a and b
+	edges = nodea.GetEdges(graph.OutgoingEdge)
+	if !edges.Next() {
+		t.Errorf("No edge")
+	}
+	edge = edges.Edge()
+	if edge.GetTo() != nodeb {
+		t.Errorf("Wrong target")
+	}
+	if edge.GetLabel() != "RELTYPE" {
+		t.Errorf("Wronglabel")
+	}
+	if ret.Get().(ResultSet).Rows[0]["1"].Get() != "A<->B" {
+		t.Errorf("Wrong name: %v", ret)
+	}
+
+	// Create full path
+	g = graph.NewOCGraph()
+	ret, err = ParseAndEvaluate(`CREATE p = (andy {name:'Andy'})-[:WORKS_AT]->(neo)<-[:WORKS_AT]-(michael {name: 'Michael'})
+RETURN p`, NewEvalContext(g))
+	if err != nil {
+		t.Error(err)
+	}
+
 }
