@@ -19,8 +19,8 @@ package graph
 // function. If the edge is accepted, it recursively descends and
 // calls accumulator.AddPath for each discovered path until AddPath
 // returns false
-func CollectAllPaths(graph Graph, firstLeg EdgeIterator, edgeFilter func(Edge) bool, dir EdgeDir, min, max int, accumulator func([]Edge) bool) {
-	var recurse func([]Edge) bool
+func CollectAllPaths(graph Graph, fromNode Node, firstLeg EdgeIterator, edgeFilter func(Edge) bool, dir EdgeDir, min, max int, accumulator func([]Edge, Node) bool) {
+	var recurse func([]Edge, Node) bool
 
 	isLoop := func(node Node, edges []Edge) bool {
 		for _, e := range edges {
@@ -34,13 +34,27 @@ func CollectAllPaths(graph Graph, firstLeg EdgeIterator, edgeFilter func(Edge) b
 		return false
 	}
 
-	recurse = func(prefix []Edge) bool {
+	recurse = func(prefix []Edge, lastNode Node) bool {
+
+		var endNode Node
+		switch dir {
+		case OutgoingEdge:
+			endNode = prefix[len(prefix)-1].GetTo()
+		case IncomingEdge:
+			endNode = prefix[len(prefix)-1].GetFrom()
+		case AnyEdge:
+			if prefix[len(prefix)-1].GetTo() == lastNode {
+				endNode = prefix[len(prefix)-1].GetFrom()
+			} else {
+				endNode = prefix[len(prefix)-1].GetTo()
+			}
+		}
 
 		if (min == -1 || len(prefix) >= min) && (max == -1 || len(prefix) <= max) {
 			// A valid path
 			entry := make([]Edge, len(prefix))
 			copy(entry, prefix)
-			if !accumulator(entry) {
+			if !accumulator(entry, endNode) {
 				return false
 			}
 		}
@@ -49,7 +63,6 @@ func CollectAllPaths(graph Graph, firstLeg EdgeIterator, edgeFilter func(Edge) b
 			return true
 		}
 
-		endNode := prefix[len(prefix)-1].GetTo()
 		if isLoop(endNode, prefix[:len(prefix)-1]) {
 			return true
 		}
@@ -63,7 +76,7 @@ func CollectAllPaths(graph Graph, firstLeg EdgeIterator, edgeFilter func(Edge) b
 		}
 		for itr.Next() {
 			edge := itr.Edge()
-			if !recurse(append(prefix, edge.(*OCEdge))) {
+			if !recurse(append(prefix, edge.(*OCEdge)), endNode) {
 				return false
 			}
 		}
@@ -72,39 +85,8 @@ func CollectAllPaths(graph Graph, firstLeg EdgeIterator, edgeFilter func(Edge) b
 
 	for firstLeg.Next() {
 		edge := firstLeg.Edge()
-		if !recurse([]Edge{edge}) {
+		if !recurse([]Edge{edge}, fromNode) {
 			break
 		}
 	}
-}
-
-type VPathIterator struct {
-	paths   [][]Edge
-	current []Edge
-}
-
-func (v *VPathIterator) AddPath(path []Edge) bool {
-	v.paths = append(v.paths, path)
-	return true
-}
-
-func (v *VPathIterator) Next() bool {
-	if len(v.paths) == 0 {
-		return false
-	}
-	v.current = v.paths[0]
-	v.paths = v.paths[1:]
-	return true
-}
-
-func (v *VPathIterator) Path() []Edge {
-	ret := make([]Edge, len(v.current))
-	copy(ret, v.current)
-	return ret
-}
-
-func GetVPathIterator(graph Graph, firstLeg EdgeIterator, edgeFilter func(Edge) bool, dir EdgeDir, min, max int) *VPathIterator {
-	var paths VPathIterator
-	CollectAllPaths(graph, firstLeg, edgeFilter, dir, min, max, paths.AddPath)
-	return &paths
 }

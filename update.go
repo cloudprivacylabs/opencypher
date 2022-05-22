@@ -321,10 +321,12 @@ func (rel RelationshipPattern) Create(ctx *EvalContext, from, to graph.Node) (gr
 		return nil, err
 	}
 	var edge graph.Edge
-	if rel.Backwards {
+	if rel.ToLeft && !rel.ToRight {
 		edge = ctx.graph.NewEdge(to, from, label, properties)
-	} else {
+	} else if !rel.ToLeft && rel.ToRight {
 		edge = ctx.graph.NewEdge(from, to, label, properties)
+	} else {
+		return nil, fmt.Errorf("Ambiguous edge direction")
 	}
 	if len(varName) > 0 {
 		ctx.SetVar(varName, ValueOf([]graph.Edge{edge}))

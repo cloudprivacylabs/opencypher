@@ -7,6 +7,11 @@ import (
 )
 
 func TestPatternExpr(t *testing.T) {
+	/*
+	   (root) -> (:c1)
+	   (root) -> (:c2) -> (:c3)
+	*/
+
 	g := graph.NewOCGraph()
 	n1 := g.NewNode([]string{"root"}, nil)
 	n2 := g.NewNode([]string{"c1"}, nil)
@@ -49,6 +54,23 @@ func TestPatternExpr(t *testing.T) {
 	}
 	if (nodes[0] != n3 && nodes[0] != n2) || (nodes[1] != n3 && nodes[1] != n2) {
 		t.Errorf("Expecting n2 n3, got %v", nodes)
+	}
+
+	pe, err = ParsePatternExpr(`(this)-[]-()-[]-(target:c2)`)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	nodes, err = pe.FindRelative(n2)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(nodes) != 1 {
+		t.Errorf("Expecting 1, got %d", len(nodes))
+		return
+	}
+	if nodes[0] != n3 {
+		t.Errorf("Expecting n3, got %s", nodes[0])
 	}
 
 }

@@ -42,9 +42,12 @@ type PatternItem struct {
 	Labels     StringSet
 	Properties map[string]interface{}
 	// Min=-1 and Max=-1 for variable length
-	Min       int
-	Max       int
-	Backwards bool
+	Min int
+	Max int
+	// ToLeft is true if this is a relationship of the form <-
+	ToLeft bool
+	// Undirected is true if this is a relationship of the form --
+	Undirected bool
 	// Name of the variable associated with this processing node. If the
 	// name is defined, it is used to constrain values. If not, it is
 	// used to store values
@@ -279,6 +282,8 @@ type MatchContext struct {
 
 	// localSymbols are symbols defined in the pattern.
 	LocalSymbols map[string]*PatternSymbol
+
+	variablePathNode Node
 }
 
 // If the current step has a local symbol, it will be recorded in the context
@@ -378,22 +383,30 @@ func (pattern Pattern) GetPlan(graph Graph, symbols map[string]*PatternSymbol) (
 		// Go forward
 		for i := index + 1; i < len(pattern); i++ {
 			if (i % 2) == 1 {
+				// Patern is an edge
 				// There is a node before this edge.
-				if pattern[i].Backwards {
+				if pattern[i].ToLeft {
 					// n<--
 					processors[i] = newIterateConnectedEdges(processors[i-1], pattern[i], IncomingEdge)
-				} else {
+				} else if !pattern[i].Undirected {
 					// n-->
 					processors[i] = newIterateConnectedEdges(processors[i-1], pattern[i], OutgoingEdge)
+				} else {
+					// n--
+					processors[i] = newIterateConnectedEdges(processors[i-1], pattern[i], AnyEdge)
 				}
 			} else {
+				// Pattern is a node
 				// There is an edge before this node, and that determines the direction
-				if pattern[i-1].Backwards {
+				if pattern[i-1].ToLeft {
 					// <--n
 					processors[i] = newIterateConnectedNodes(processors[i-1], pattern[i], useFromNode)
-				} else {
+				} else if !pattern[i-1].Undirected {
 					// -->n
 					processors[i] = newIterateConnectedNodes(processors[i-1], pattern[i], useToNode)
+				} else {
+					// --n
+					processors[i] = newIterateConnectedNodes(processors[i-1], pattern[i], useAnyNode, processors[i-2])
 				}
 			}
 			plan.steps = append(plan.steps, processors[i])
@@ -402,21 +415,25 @@ func (pattern Pattern) GetPlan(graph Graph, symbols map[string]*PatternSymbol) (
 		for i := index - 1; i >= 0; i-- {
 			if (i % 2) == 1 {
 				// There is a node after this edge
-				if pattern[i].Backwards {
+				if pattern[i].ToLeft {
 					// <--n
 					processors[i] = newIterateConnectedEdges(processors[i+1], pattern[i], OutgoingEdge)
-				} else {
+				} else if !pattern[i].Undirected {
 					// -->n
 					processors[i] = newIterateConnectedEdges(processors[i+1], pattern[i], IncomingEdge)
+				} else {
+					processors[i] = newIterateConnectedEdges(processors[i+1], pattern[i], AnyEdge)
 				}
 			} else {
 				// There is an edge after this node, and that determines the direction
-				if pattern[i+1].Backwards {
+				if pattern[i+1].ToLeft {
 					// n<--
 					processors[i] = newIterateConnectedNodes(processors[i+1], pattern[i], useToNode)
-				} else {
+				} else if !pattern[i+1].Undirected {
 					// n-->
 					processors[i] = newIterateConnectedNodes(processors[i+1], pattern[i], useFromNode)
+				} else {
+					processors[i] = newIterateConnectedNodes(processors[i+1], pattern[i], useAnyNode, processors[i+2])
 				}
 			}
 			plan.steps = append(plan.steps, processors[i])
@@ -429,19 +446,23 @@ func (pattern Pattern) GetPlan(graph Graph, symbols map[string]*PatternSymbol) (
 		for i := index + 1; i < len(pattern); i++ {
 			if (i % 2) == 1 {
 				// There is a node before this edge
-				if pattern[i].Backwards {
+				if pattern[i].ToLeft {
 					// n<--
 					processors[i] = newIterateConnectedEdges(processors[i-1], pattern[i], IncomingEdge)
-				} else {
+				} else if !pattern[i].Undirected {
 					// n-->
 					processors[i] = newIterateConnectedEdges(processors[i-1], pattern[i], OutgoingEdge)
+				} else {
+					processors[i] = newIterateConnectedEdges(processors[i-1], pattern[i], AnyEdge)
 				}
 			} else {
 				// There is an edge before this node, and that determines the direction
-				if pattern[i-1].Backwards {
+				if pattern[i-1].ToLeft {
 					processors[i] = newIterateConnectedNodes(processors[i-1], pattern[i], useFromNode)
-				} else {
+				} else if !pattern[i-1].Undirected {
 					processors[i] = newIterateConnectedNodes(processors[i-1], pattern[i], useToNode)
+				} else {
+					processors[i] = newIterateConnectedNodes(processors[i-1], pattern[i], useAnyNode, processors[i-2])
 				}
 			}
 			plan.steps = append(plan.steps, processors[i])
@@ -450,19 +471,23 @@ func (pattern Pattern) GetPlan(graph Graph, symbols map[string]*PatternSymbol) (
 		for i := index - 1; i >= 0; i-- {
 			if (i % 2) == 1 {
 				// There is a node after this edge
-				if pattern[i].Backwards {
+				if pattern[i].ToLeft {
 					// <--n
 					processors[i] = newIterateConnectedEdges(processors[i+1], pattern[i], OutgoingEdge)
-				} else {
+				} else if !pattern[i].Undirected {
 					// -->n
 					processors[i] = newIterateConnectedEdges(processors[i+1], pattern[i], IncomingEdge)
+				} else {
+					processors[i] = newIterateConnectedEdges(processors[i+1], pattern[i], AnyEdge)
 				}
 			} else {
 				// There is an edge after this node, and that determines the direction
-				if pattern[i+1].Backwards {
+				if pattern[i+1].ToLeft {
 					processors[i] = newIterateConnectedNodes(processors[i+1], pattern[i], useToNode)
-				} else {
+				} else if !pattern[i+1].Undirected {
 					processors[i] = newIterateConnectedNodes(processors[i+1], pattern[i], useFromNode)
+				} else {
+					processors[i] = newIterateConnectedNodes(processors[i+1], pattern[i], useAnyNode, processors[i+2])
 				}
 			}
 			plan.steps = append(plan.steps, processors[i])

@@ -21,7 +21,6 @@ import (
 
 // An EdgeMap stores edges indexed by edge label
 type EdgeMap struct {
-	// m[string]*linkedhashset
 	m *linkedhashmap.Map
 	n int
 }

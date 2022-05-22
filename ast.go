@@ -269,7 +269,8 @@ type PatternChain struct {
 }
 
 type RelationshipPattern struct {
-	Backwards  bool
+	ToLeft     bool
+	ToRight    bool
 	Var        *Variable
 	RelTypes   *RelationshipTypes
 	Range      *RangeLiteral
@@ -916,7 +917,8 @@ func oC_PatternElementChain(ctx *parser.OC_PatternElementChainContext) PatternCh
 
 func oC_RelationshipPattern(ctx *parser.OC_RelationshipPatternContext) RelationshipPattern {
 	ret := RelationshipPattern{
-		Backwards: ctx.OC_LeftArrowHead() != nil,
+		ToLeft:  ctx.OC_LeftArrowHead() != nil,
+		ToRight: ctx.OC_RightArrowHead() != nil,
 	}
 	if x := ctx.OC_RelationshipDetail(); x != nil {
 		detctx := x.(*parser.OC_RelationshipDetailContext)

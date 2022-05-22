@@ -14,6 +14,10 @@
 
 package graph
 
+import (
+	"fmt"
+)
+
 type OCEdge struct {
 	from, to *OCNode
 	label    string
@@ -40,4 +44,8 @@ func (edge *OCEdge) RemoveProperty(key string) {
 // Remove an edge
 func (edge *OCEdge) Remove() {
 	edge.from.graph.RemoveEdge(edge)
+}
+
+func (edge *OCEdge) String() string {
+	return fmt.Sprintf("[:%s %s]", edge.label, edge.Properties)
 }

@@ -92,6 +92,7 @@ type EdgeDir int
 // Incoming and outgoing edge direction constants
 const (
 	IncomingEdge EdgeDir = -1
+	AnyEdge      EdgeDir = 0
 	OutgoingEdge EdgeDir = 1
 )
 

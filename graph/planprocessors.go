@@ -18,7 +18,7 @@ import (
 )
 
 func logf(pattern string, args ...interface{}) {
-	//fmt.Printf(pattern, args...)
+	//	fmt.Printf(pattern, args...)
 }
 
 type iterateNodes struct {
@@ -137,20 +137,19 @@ func newIterateConnectedEdges(source planProcessor, item PatternItem, dir EdgeDi
 
 func (processor *iterateConnectedEdges) init(ctx *MatchContext) {
 	if processor.edgeItr == nil {
-		node := processor.source.GetResult().(Node)
-		processor.edgeItr = &edgeIterator{
-			&filterIterator{
-				itr: node.GetEdgesWithAnyLabel(processor.dir, processor.patternItem.Labels),
-				filter: func(item interface{}) bool {
-					return processor.edgeFilter(item.(*OCEdge))
-				},
-			},
-		}
 	}
 }
 
 func (processor *iterateConnectedEdges) Run(ctx *MatchContext, next matchAccumulator) error {
-	processor.init(ctx)
+	node := processor.source.GetResult().(Node)
+	processor.edgeItr = &edgeIterator{
+		&filterIterator{
+			itr: node.GetEdgesWithAnyLabel(processor.dir, processor.patternItem.Labels),
+			filter: func(item interface{}) bool {
+				return processor.edgeFilter(item.(*OCEdge))
+			},
+		},
+	}
 	if processor.edgeItr == nil {
 		return nil
 	}
@@ -166,14 +165,17 @@ func (processor *iterateConnectedEdges) Run(ctx *MatchContext, next matchAccumul
 		}
 		return nil
 	}
+	logf("IterateConnectedEdges min=%d max=%d %+v\n", processor.patternItem.Min, processor.patternItem.Max, processor.result)
 	var err error
-	CollectAllPaths(ctx.Graph, processor.edgeItr, processor.edgeFilter, processor.dir, processor.patternItem.Min, processor.patternItem.Max, func(path []Edge) bool {
+	CollectAllPaths(ctx.Graph, node, processor.edgeItr, processor.edgeFilter, processor.dir, processor.patternItem.Min, processor.patternItem.Max, func(path []Edge, endNode Node) bool {
 		processor.result = path
-		logf("IterateConnectedEdges len>1 %+v\n", processor.result)
+		logf("IterateConnectedEdges testing len=%d %+v\n", len(path), processor.result)
 		ctx.recordStepResult(processor)
+		ctx.variablePathNode = endNode
 		if err = next.Run(ctx); err != nil {
 			return false
 		}
+		ctx.variablePathNode = nil
 		ctx.resetStepResult(processor)
 		return true
 	})
@@ -185,33 +187,53 @@ func (processor *iterateConnectedEdges) GetResult() interface{}      { return pr
 func (processor *iterateConnectedEdges) IsEdge()                     {}
 
 const useFromNode = -1
+const useAnyNode = 0
 const useToNode = 1
 
 type iterateConnectedNodes struct {
-	patternItem PatternItem
-	source      planProcessor
-	useNode     int
-	result      Node
-	nodeFilter  func(Node) bool
+	patternItem    PatternItem
+	source         planProcessor
+	useNode        int
+	result         Node
+	nodeFilter     func(Node) bool
+	prevOrNextNode planProcessor
 }
 
-func newIterateConnectedNodes(source planProcessor, item PatternItem, useNode int) *iterateConnectedNodes {
-	return &iterateConnectedNodes{
+func newIterateConnectedNodes(source planProcessor, item PatternItem, useNode int, prevOrNextNode ...planProcessor) *iterateConnectedNodes {
+	ret := &iterateConnectedNodes{
 		patternItem: item,
 		source:      source,
 		useNode:     useNode,
 		nodeFilter:  item.getNodeFilter(),
 	}
+	if useNode == useAnyNode {
+		ret.prevOrNextNode = prevOrNextNode[0]
+	}
+	return ret
 }
 
 func (processor *iterateConnectedNodes) Run(ctx *MatchContext, next matchAccumulator) error {
 	edges := processor.source.GetResult().([]Edge)
 	edge := edges[len(edges)-1]
 	var node Node
-	if processor.useNode == useToNode {
-		node = edge.GetTo()
+
+	if ctx.variablePathNode != nil {
+		// If this is part of a variable length path, get the last node from the context
+		node = ctx.variablePathNode
 	} else {
-		node = edge.GetFrom()
+		switch processor.useNode {
+		case useToNode:
+			node = edge.GetTo()
+		case useFromNode:
+			node = edge.GetFrom()
+		case useAnyNode:
+			n := processor.prevOrNextNode.GetResult().(Node)
+			if edge.GetTo() == n {
+				node = edge.GetFrom()
+			} else {
+				node = edge.GetTo()
+			}
+		}
 	}
 	logf("Iterate connected nodes with node=%+v\n", node)
 	if processor.nodeFilter(node) {

@@ -227,9 +227,12 @@ func (rp RelationshipPattern) getPattern(ctx *EvalContext) (graph.PatternItem, e
 	} else {
 		ret.Min, ret.Max = 1, 1
 	}
-	if rp.Backwards {
-		ret.Backwards = true
+	if !rp.ToRight && !rp.ToLeft {
+		ret.Undirected = true
+	} else if rp.ToLeft {
+		ret.ToLeft = rp.ToLeft
 	}
+
 	var err error
 	props, err := rp.Properties.getPattern(ctx)
 	if err != nil {
