@@ -379,7 +379,7 @@ func addlistlist(a, b []Value) RValue {
 	return ret
 }
 
-func (expr *AddOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
+func (expr *addOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	if expr.constValue != nil {
 		return expr.constValue, nil
 	}

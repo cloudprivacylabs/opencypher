@@ -379,7 +379,7 @@ func (query RegularQuery) Evaluate(ctx *EvalContext) (Value, error) {
 	return RValue{Value: resultSet}, nil
 }
 
-func (query SinglePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
+func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 	ret := ResultSet{}
 	project := func(rows []map[string]Value) error {
 		for _, item := range rows {
@@ -461,7 +461,7 @@ func (prj ProjectionItems) Project(ctx *EvalContext, values map[string]Value) (m
 	return ret, nil
 }
 
-func (pe PropertyExpression) Evaluate(ctx *EvalContext) (Value, error) {
+func (pe propertyExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	val, err := pe.Atom.Evaluate(ctx)
 	if err != nil {
 		return nil, err
@@ -512,10 +512,10 @@ func (pe PropertyExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	return val, nil
 }
 
-func (unwind Unwind) GetResults(ctx *EvalContext) (ResultSet, error)      { panic("Unimplemented") }
+func (unwind unwind) GetResults(ctx *EvalContext) (ResultSet, error)      { panic("Unimplemented") }
 func (ls ListComprehension) Evaluate(ctx *EvalContext) (Value, error)     { panic("Unimplemented") }
 func (p PatternComprehension) Evaluate(ctx *EvalContext) (Value, error)   { panic("Unimplemented") }
 func (flt FilterAtom) Evaluate(ctx *EvalContext) (Value, error)           { panic("Unimplemented") }
 func (rel RelationshipsPattern) Evaluate(ctx *EvalContext) (Value, error) { panic("Unimplemented") }
 func (cnt CountAtom) Evaluate(ctx *EvalContext) (Value, error)            { panic("Unimplemented") }
-func (mq MultiPartQuery) Evaluate(ctx *EvalContext) (Value, error)        { panic("Unimplemented") }
+func (mq multiPartQuery) Evaluate(ctx *EvalContext) (Value, error)        { panic("Unimplemented") }

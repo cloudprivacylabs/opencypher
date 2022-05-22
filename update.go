@@ -6,7 +6,7 @@ import (
 	"github.com/cloudprivacylabs/opencypher/graph"
 )
 
-func (s *Set) Update(ctx *EvalContext, result ResultSet) (Value, error) {
+func (s *set) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	// Work on the cartesian product of result columns
 	var err error
 	subctx := ctx.SubContext()
@@ -27,11 +27,11 @@ func (s *Set) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	return RValue{}, nil
 }
 
-func (s Set) TopLevelUpdate(ctx *EvalContext) error {
+func (s set) TopLevelUpdate(ctx *EvalContext) error {
 	return fmt.Errorf("Cannot use SET at top level")
 }
 
-func (s *SetItem) update(ctx *EvalContext, data map[string]Value, result ResultSet) (err error) {
+func (s *setItem) update(ctx *EvalContext, data map[string]Value, result ResultSet) (err error) {
 	var exprResult Value
 
 	if s.Expression != nil {
@@ -128,11 +128,11 @@ func (s *SetItem) update(ctx *EvalContext, data map[string]Value, result ResultS
 	return nil
 }
 
-func (Delete) TopLevelUpdate(ctx *EvalContext) error {
+func (deleteClause) TopLevelUpdate(ctx *EvalContext) error {
 	return fmt.Errorf("Cannot use DELETE at top level")
 }
 
-func (d Delete) Update(ctx *EvalContext, result ResultSet) (Value, error) {
+func (d deleteClause) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	subctx := ctx.SubContext()
 	for _, row := range result.Rows {
 		for k, v := range row {
@@ -166,11 +166,11 @@ func (d Delete) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	return RValue{Value: ResultSet{}}, nil
 }
 
-func (Remove) TopLevelUpdate(ctx *EvalContext) error {
+func (remove) TopLevelUpdate(ctx *EvalContext) error {
 	return fmt.Errorf("Cannot use REMOVE at top level")
 }
 
-func (r Remove) Update(ctx *EvalContext, result ResultSet) (Value, error) {
+func (r remove) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	subctx := ctx.SubContext()
 	for _, row := range result.Rows {
 		for k, v := range row {
@@ -210,7 +210,7 @@ func (r Remove) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	return RValue{Value: result}, nil
 }
 
-func (c Create) TopLevelUpdate(ctx *EvalContext) error {
+func (c create) TopLevelUpdate(ctx *EvalContext) error {
 	for _, part := range c.Pattern.Parts {
 		if err := part.Create(ctx); err != nil {
 			return err
@@ -219,7 +219,7 @@ func (c Create) TopLevelUpdate(ctx *EvalContext) error {
 	return nil
 }
 
-func (c Create) Update(ctx *EvalContext, result ResultSet) (Value, error) {
+func (c create) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	for _, row := range result.Rows {
 		for k, v := range row {
 			ctx.SetVar(k, v)

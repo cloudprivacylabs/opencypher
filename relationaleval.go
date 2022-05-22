@@ -122,7 +122,7 @@ func comparePrimitiveValues(v1, v2 interface{}) (int, error) {
 
 }
 
-func (expr ComparisonExpression) Evaluate(ctx *EvalContext) (Value, error) {
+func (expr comparisonExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	val, err := expr.First.Evaluate(ctx)
 	if err != nil {
 		return nil, err
@@ -163,7 +163,7 @@ func (expr ComparisonExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	return ret, nil
 }
 
-func (expr NotExpression) Evaluate(ctx *EvalContext) (Value, error) {
+func (expr notExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	val, err := expr.Part.Evaluate(ctx)
 	if err != nil {
 		return nil, err
@@ -178,7 +178,7 @@ func (expr NotExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	return RValue{Value: !value, Const: val.IsConst()}, nil
 }
 
-func (expr AndExpression) Evaluate(ctx *EvalContext) (Value, error) {
+func (expr andExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	var ret RValue
 	for i := range expr.Parts {
 		val, err := expr.Parts[i].Evaluate(ctx)
@@ -209,7 +209,7 @@ func (expr AndExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	return ret, nil
 }
 
-func (expr XorExpression) Evaluate(ctx *EvalContext) (Value, error) {
+func (expr xorExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	var ret RValue
 	for i := range expr.Parts {
 		val, err := expr.Parts[i].Evaluate(ctx)
@@ -237,7 +237,7 @@ func (expr XorExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	return ret, nil
 }
 
-func (expr OrExpression) Evaluate(ctx *EvalContext) (Value, error) {
+func (expr orExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	var ret RValue
 	for i := range expr.Parts {
 		val, err := expr.Parts[i].Evaluate(ctx)

@@ -14,70 +14,70 @@ type Evaluatable interface {
 
 type RegularQuery struct {
 	SingleQuery Evaluatable
-	Unions      []Union
+	Unions      []union
 }
 
-type Union struct {
+type union struct {
 	All         bool
 	SingleQuery Evaluatable
 }
 
-type SinglePartQuery struct {
+type singlePartQuery struct {
 	Read   []ReadingClause
 	Update []UpdatingClause
 	Return *ReturnClause
 }
 
-type Create struct {
+type create struct {
 	Pattern Pattern
 }
 
-type Delete struct {
+type deleteClause struct {
 	Detach bool
 	Exprs  []Expression
 }
 
-type Remove struct {
-	Items []RemoveItem
+type remove struct {
+	Items []removeItem
 }
 
-type RemoveItem struct {
+type removeItem struct {
 	Variable   *Variable
 	NodeLabels NodeLabels
-	Property   *PropertyExpression
+	Property   *propertyExpression
 }
 
-type Set struct {
-	Items []SetItem
+type set struct {
+	Items []setItem
 }
 
-type SetItem struct {
-	Property   *PropertyExpression
+type setItem struct {
+	Property   *propertyExpression
 	Variable   *Variable
 	Op         string
 	Expression Expression
 	NodeLabels NodeLabels
 }
 
-type PropertyExpression struct {
+type propertyExpression struct {
 	Atom   Atom
 	Lookup []SchemaName
 }
 
-type MultiPartQueryPart struct {
+type multiPartQueryPart struct {
 	Read   []ReadingClause
 	Update []UpdatingClause
-	With   WithClause
+	With   withClause
 }
 
-type WithClause struct {
+type withClause struct {
 	Projection ProjectionBody
 	Where      Expression
 }
 
-type MultiPartQuery struct {
-	Parts       []MultiPartQueryPart
-	SingleQuery SinglePartQuery
+type multiPartQuery struct {
+	Parts       []multiPartQueryPart
+	SingleQuery singlePartQuery
 }
 
 type ReadingClause interface {
@@ -93,35 +93,35 @@ type Expression interface {
 	Evaluatable
 }
 
-type Unwind struct {
+type unwind struct {
 	Expr Expression
 	As   Variable
 }
 
-type OrExpression struct {
+type orExpression struct {
 	Parts []Evaluatable
 }
-type XorExpression struct {
+type xorExpression struct {
 	Parts []Evaluatable
 }
-type AndExpression struct {
+type andExpression struct {
 	Parts []Evaluatable
 }
 
-type NotExpression struct {
+type notExpression struct {
 	Part Expression
 }
-type ComparisonExpression struct {
+type comparisonExpression struct {
 	First  Expression
-	Second []PartialComparisonExpression
+	Second []partialComparisonExpression
 }
 
-type PartialComparisonExpression struct {
+type partialComparisonExpression struct {
 	Op   string
 	Expr Expression
 }
 
-type AddOrSubtractExpression struct {
+type addOrSubtractExpression struct {
 	Add []Expression
 	Sub []Expression
 
@@ -394,8 +394,8 @@ func oC_RegularQuery(ctx *parser.OC_RegularQueryContext) RegularQuery {
 	return ret
 }
 
-func oC_Union(ctx *parser.OC_UnionContext) Union {
-	return Union{
+func oC_Union(ctx *parser.OC_UnionContext) union {
+	return union{
 		All:         ctx.ALL() != nil,
 		SingleQuery: oC_SingleQuery(ctx.OC_SingleQuery().(*parser.OC_SingleQueryContext)),
 	}
@@ -408,8 +408,8 @@ func oC_SingleQuery(ctx *parser.OC_SingleQueryContext) Evaluatable {
 	return oC_MultiPartQuery(ctx.OC_MultiPartQuery().(*parser.OC_MultiPartQueryContext))
 }
 
-func oC_SinglePartQuery(ctx *parser.OC_SinglePartQueryContext) SinglePartQuery {
-	ret := SinglePartQuery{}
+func oC_SinglePartQuery(ctx *parser.OC_SinglePartQueryContext) singlePartQuery {
+	ret := singlePartQuery{}
 	for _, r := range ctx.AllOC_ReadingClause() {
 		ret.Read = append(ret.Read, oC_ReadingClause(r.(*parser.OC_ReadingClauseContext)))
 	}
@@ -425,8 +425,8 @@ func oC_SinglePartQuery(ctx *parser.OC_SinglePartQueryContext) SinglePartQuery {
 
 //oC_MultiPartQuery
 //              :  ( ( oC_ReadingClause SP? )* ( oC_UpdatingClause SP? )* oC_With SP? )+ oC_SinglePartQuery ;
-func oC_MultiPartQuery(ctx *parser.OC_MultiPartQueryContext) MultiPartQuery {
-	ret := MultiPartQuery{Parts: []MultiPartQueryPart{}}
+func oC_MultiPartQuery(ctx *parser.OC_MultiPartQueryContext) multiPartQuery {
+	ret := multiPartQuery{Parts: []multiPartQueryPart{}}
 	count := ctx.GetChildCount()
 	lastIsFull := true
 	for child := 0; child < count; child++ {
@@ -441,7 +441,7 @@ func oC_MultiPartQuery(ctx *parser.OC_MultiPartQueryContext) MultiPartQuery {
 			lastIsFull = true
 		case *parser.OC_WithContext:
 			lastPart.With = oC_With(expr)
-			ret.Parts = append(ret.Parts, MultiPartQueryPart{})
+			ret.Parts = append(ret.Parts, multiPartQueryPart{})
 			lastIsFull = false
 		case *parser.OC_SinglePartQueryContext:
 			ret.SingleQuery = oC_SinglePartQuery(expr)
@@ -453,8 +453,8 @@ func oC_MultiPartQuery(ctx *parser.OC_MultiPartQueryContext) MultiPartQuery {
 	return ret
 }
 
-func oC_With(ctx *parser.OC_WithContext) WithClause {
-	ret := WithClause{
+func oC_With(ctx *parser.OC_WithContext) withClause {
+	ret := withClause{
 		Projection: oC_ProjectionBody(ctx.OC_ProjectionBody().(*parser.OC_ProjectionBodyContext)),
 	}
 	if w := ctx.OC_Where(); w != nil {
@@ -581,7 +581,7 @@ func oC_Expression(ctx *parser.OC_ExpressionContext) Expression {
 }
 
 func oC_OrExpression(ctx *parser.OC_OrExpressionContext) Expression {
-	ret := OrExpression{}
+	ret := orExpression{}
 	for _, x := range ctx.AllOC_XorExpression() {
 		ret.Parts = append(ret.Parts, oC_XorExpression(x.(*parser.OC_XorExpressionContext)))
 	}
@@ -592,7 +592,7 @@ func oC_OrExpression(ctx *parser.OC_OrExpressionContext) Expression {
 }
 
 func oC_XorExpression(ctx *parser.OC_XorExpressionContext) Expression {
-	ret := XorExpression{}
+	ret := xorExpression{}
 	for _, x := range ctx.AllOC_AndExpression() {
 		ret.Parts = append(ret.Parts, oC_AndExpression(x.(*parser.OC_AndExpressionContext)))
 	}
@@ -603,7 +603,7 @@ func oC_XorExpression(ctx *parser.OC_XorExpressionContext) Expression {
 }
 
 func oC_AndExpression(ctx *parser.OC_AndExpressionContext) Expression {
-	ret := AndExpression{}
+	ret := andExpression{}
 	for _, x := range ctx.AllOC_NotExpression() {
 		ret.Parts = append(ret.Parts, oC_NotExpression(x.(*parser.OC_NotExpressionContext)))
 	}
@@ -615,7 +615,7 @@ func oC_AndExpression(ctx *parser.OC_AndExpressionContext) Expression {
 
 func oC_NotExpression(ctx *parser.OC_NotExpressionContext) Expression {
 	if len(ctx.AllNOT())%2 == 1 {
-		return NotExpression{
+		return notExpression{
 			Part: oC_ComparisonExpression(ctx.OC_ComparisonExpression().(*parser.OC_ComparisonExpressionContext)),
 		}
 	}
@@ -623,7 +623,7 @@ func oC_NotExpression(ctx *parser.OC_NotExpressionContext) Expression {
 }
 
 func oC_ComparisonExpression(ctx *parser.OC_ComparisonExpressionContext) Expression {
-	ret := ComparisonExpression{
+	ret := comparisonExpression{
 		First: oC_AddOrSubtractExpression(ctx.OC_AddOrSubtractExpression().(*parser.OC_AddOrSubtractExpressionContext)),
 	}
 	for _, x := range ctx.AllOC_PartialComparisonExpression() {
@@ -642,7 +642,7 @@ func oC_ComparisonExpression(ctx *parser.OC_ComparisonExpressionContext) Express
 //      )*
 //
 func oC_AddOrSubtractExpression(ctx *parser.OC_AddOrSubtractExpressionContext) Expression {
-	ret := &AddOrSubtractExpression{}
+	ret := &addOrSubtractExpression{}
 	target := &ret.Add
 	count := ctx.GetChildCount()
 	for child := 0; child < count; child++ {
@@ -806,8 +806,8 @@ func oC_PropertyOrLabelsExpression(ctx *parser.OC_PropertyOrLabelsExpressionCont
 	return ret
 }
 
-func oC_PartialComparisonExpression(ctx *parser.OC_PartialComparisonExpressionContext) PartialComparisonExpression {
-	ret := PartialComparisonExpression{Expr: oC_AddOrSubtractExpression(ctx.OC_AddOrSubtractExpression().(*parser.OC_AddOrSubtractExpressionContext))}
+func oC_PartialComparisonExpression(ctx *parser.OC_PartialComparisonExpressionContext) partialComparisonExpression {
+	ret := partialComparisonExpression{Expr: oC_AddOrSubtractExpression(ctx.OC_AddOrSubtractExpression().(*parser.OC_AddOrSubtractExpressionContext))}
 	for i := 0; i < ctx.GetChildCount(); i++ {
 		if tok, ok := ctx.GetChild(i).(antlr.TerminalNode); ok {
 			t := tok.GetText()
@@ -1276,32 +1276,32 @@ func oC_DoubleLiteral(ctx *parser.OC_DoubleLiteralContext) DoubleLiteral {
 	return DoubleLiteral(v)
 }
 
-func oC_Unwind(ctx *parser.OC_UnwindContext) Unwind {
-	return Unwind{
+func oC_Unwind(ctx *parser.OC_UnwindContext) unwind {
+	return unwind{
 		Expr: oC_Expression(ctx.OC_Expression().(*parser.OC_ExpressionContext)),
 		As:   oC_Variable(ctx.OC_Variable().(*parser.OC_VariableContext)),
 	}
 }
 
 func oC_Set(ctx *parser.OC_SetContext) UpdatingClause {
-	ret := &Set{}
+	ret := &set{}
 	for _, item := range ctx.AllOC_SetItem() {
 		ret.Items = append(ret.Items, oC_SetItem(item.(*parser.OC_SetItemContext)))
 	}
 	return ret
 }
 
-func oC_SetItem(ctx *parser.OC_SetItemContext) SetItem {
+func oC_SetItem(ctx *parser.OC_SetItemContext) setItem {
 	if p := ctx.OC_PropertyExpression(); p != nil {
 		pe := oC_PropertyExpression(p.(*parser.OC_PropertyExpressionContext))
-		return SetItem{
+		return setItem{
 			Property:   &pe,
 			Expression: oC_Expression(ctx.OC_Expression().(*parser.OC_ExpressionContext)),
 		}
 	}
 	v := oC_Variable(ctx.OC_Variable().(*parser.OC_VariableContext))
 	if expr := ctx.OC_Expression(); expr != nil {
-		ret := SetItem{
+		ret := setItem{
 			Variable:   &v,
 			Expression: oC_Expression(expr.(*parser.OC_ExpressionContext)),
 		}
@@ -1317,15 +1317,15 @@ func oC_SetItem(ctx *parser.OC_SetItemContext) SetItem {
 		}
 		return ret
 	}
-	ret := SetItem{
+	ret := setItem{
 		Variable:   &v,
 		NodeLabels: oC_NodeLabels(ctx.OC_NodeLabels().(*parser.OC_NodeLabelsContext)),
 	}
 	return ret
 }
 
-func oC_PropertyExpression(ctx *parser.OC_PropertyExpressionContext) PropertyExpression {
-	ret := PropertyExpression{
+func oC_PropertyExpression(ctx *parser.OC_PropertyExpressionContext) propertyExpression {
+	ret := propertyExpression{
 		Atom: oC_Atom(ctx.OC_Atom().(*parser.OC_AtomContext)),
 	}
 	for _, l := range ctx.AllOC_PropertyLookup() {
@@ -1335,7 +1335,7 @@ func oC_PropertyExpression(ctx *parser.OC_PropertyExpressionContext) PropertyExp
 }
 
 func oC_Delete(ctx *parser.OC_DeleteContext) UpdatingClause {
-	ret := Delete{
+	ret := deleteClause{
 		Detach: ctx.DETACH() != nil,
 	}
 	for _, e := range ctx.AllOC_Expression() {
@@ -1345,15 +1345,15 @@ func oC_Delete(ctx *parser.OC_DeleteContext) UpdatingClause {
 }
 
 func oC_Remove(ctx *parser.OC_RemoveContext) UpdatingClause {
-	ret := Remove{}
+	ret := remove{}
 	for _, item := range ctx.AllOC_RemoveItem() {
 		ret.Items = append(ret.Items, oC_RemoveItem(item.(*parser.OC_RemoveItemContext)))
 	}
 	return ret
 }
 
-func oC_RemoveItem(ctx *parser.OC_RemoveItemContext) RemoveItem {
-	ret := RemoveItem{}
+func oC_RemoveItem(ctx *parser.OC_RemoveItemContext) removeItem {
+	ret := removeItem{}
 	if v := ctx.OC_Variable(); v != nil {
 		variable := oC_Variable(v.(*parser.OC_VariableContext))
 		ret.Variable = &variable
@@ -1369,7 +1369,7 @@ func oC_RemoveItem(ctx *parser.OC_RemoveItemContext) RemoveItem {
 }
 
 func oC_Create(ctx *parser.OC_CreateContext) UpdatingClause {
-	ret := Create{
+	ret := create{
 		Pattern: oC_Pattern(ctx.OC_Pattern().(*parser.OC_PatternContext)),
 	}
 	return ret
