@@ -14,8 +14,8 @@ func (s *set) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 		for k, v := range data {
 			subctx.SetVar(k, v)
 		}
-		for i := range s.Items {
-			if err = s.Items[i].update(subctx, data, result); err != nil {
+		for i := range s.items {
+			if err = s.items[i].update(subctx, data, result); err != nil {
 				return false
 			}
 		}
@@ -34,14 +34,14 @@ func (s set) TopLevelUpdate(ctx *EvalContext) error {
 func (s *setItem) update(ctx *EvalContext, data map[string]Value, result ResultSet) (err error) {
 	var exprResult Value
 
-	if s.Expression != nil {
-		exprResult, err = s.Expression.Evaluate(ctx)
+	if s.expression != nil {
+		exprResult, err = s.expression.Evaluate(ctx)
 		if err != nil {
 			return err
 		}
 	}
-	if s.Property != nil {
-		value, err := s.Property.Evaluate(ctx)
+	if s.property != nil {
+		value, err := s.property.Evaluate(ctx)
 		if err != nil {
 			return err
 		}
@@ -53,7 +53,7 @@ func (s *setItem) update(ctx *EvalContext, data map[string]Value, result ResultS
 		return nil
 	}
 
-	value, err := s.Variable.Evaluate(ctx)
+	value, err := s.variable.Evaluate(ctx)
 	lvalue, ok := value.(LValue)
 	if !ok {
 		return ErrNotAnLValue
@@ -76,7 +76,7 @@ func (s *setItem) update(ctx *EvalContext, data map[string]Value, result ResultS
 		}
 		return sourceProps, nil
 	}
-	switch s.Op {
+	switch s.op {
 	case "=":
 		switch v := lvalue.Get().(type) {
 		case graph.Node:
@@ -120,7 +120,7 @@ func (s *setItem) update(ctx *EvalContext, data map[string]Value, result ResultS
 			return ErrInvalidAssignment("Not a node")
 		}
 		labels := node.GetLabels()
-		for _, l := range s.NodeLabels {
+		for _, l := range s.nodeLabels {
 			labels.Add(l.String())
 		}
 		node.SetLabels(labels)
@@ -138,7 +138,7 @@ func (d deleteClause) Update(ctx *EvalContext, result ResultSet) (Value, error) 
 		for k, v := range row {
 			subctx.SetVar(k, v)
 		}
-		for _, expr := range d.Exprs {
+		for _, expr := range d.exprs {
 			v, err := expr.Evaluate(subctx)
 			if err != nil {
 				return nil, err
@@ -150,7 +150,7 @@ func (d deleteClause) Update(ctx *EvalContext, result ResultSet) (Value, error) 
 			case graph.Node:
 				if item.GetEdges(graph.OutgoingEdge).Next() || item.GetEdges(graph.IncomingEdge).Next() {
 					// Must have detach
-					if !d.Detach {
+					if !d.detach {
 						return nil, fmt.Errorf("Cannot delete attached node")
 					}
 				}
@@ -176,9 +176,9 @@ func (r remove) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 		for k, v := range row {
 			subctx.SetVar(k, v)
 		}
-		for _, item := range r.Items {
-			if item.Property != nil {
-				value, err := item.Property.Evaluate(subctx)
+		for _, item := range r.items {
+			if item.property != nil {
+				value, err := item.property.Evaluate(subctx)
 				if err != nil {
 					return nil, err
 				}
@@ -189,7 +189,7 @@ func (r remove) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 				lvalue.Set(nil)
 				continue
 			}
-			v, err := subctx.GetVar(string(*item.Variable))
+			v, err := subctx.GetVar(string(*item.variable))
 			if err != nil {
 				return nil, err
 			}
@@ -201,7 +201,7 @@ func (r remove) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 				return nil, fmt.Errorf("Expecting a node in remove statement")
 			}
 			labels := node.GetLabels()
-			for _, l := range item.NodeLabels {
+			for _, l := range item.nodeLabels {
 				labels.Remove(l.String())
 			}
 			node.SetLabels(labels)
@@ -211,7 +211,7 @@ func (r remove) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 }
 
 func (c create) TopLevelUpdate(ctx *EvalContext) error {
-	for _, part := range c.Pattern.Parts {
+	for _, part := range c.pattern.Parts {
 		if err := part.Create(ctx); err != nil {
 			return err
 		}
@@ -231,16 +231,16 @@ func (c create) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	return RValue{Value: result}, nil
 }
 
-func (np NodePattern) Create(ctx *EvalContext) (string, graph.Node, error) {
+func (np nodePattern) Create(ctx *EvalContext) (string, graph.Node, error) {
 	// Is there a variable
 	var varName string
-	if np.Var != nil {
-		varName = string(*np.Var)
+	if np.variable != nil {
+		varName = string(*np.variable)
 		// Is the var defined already
 		existingNode, err := ctx.GetVar(varName)
 		if err == nil {
 			// Var is defined already. Cannot have labels or properties
-			if np.Labels != nil || np.Properties != nil {
+			if np.labels != nil || np.properties != nil {
 				return "", nil, fmt.Errorf("Cannot specify labels or properties in bound node of a CREATE statement")
 			}
 			node, ok := existingNode.Get().(graph.Node)
@@ -251,12 +251,12 @@ func (np NodePattern) Create(ctx *EvalContext) (string, graph.Node, error) {
 		}
 	}
 	labels := graph.NewStringSet()
-	if np.Labels != nil {
-		for _, n := range *np.Labels {
+	if np.labels != nil {
+		for _, n := range *np.labels {
 			labels.Add(n.String())
 		}
 	}
-	properties, err := np.Properties.getPropertiesMap(ctx)
+	properties, err := np.properties.getPropertiesMap(ctx)
 	if err != nil {
 		return "", nil, err
 	}
@@ -268,43 +268,43 @@ func (np NodePattern) Create(ctx *EvalContext) (string, graph.Node, error) {
 }
 
 func (part PatternPart) Create(ctx *EvalContext) error {
-	_, lastNode, err := part.Start.Create(ctx)
+	_, lastNode, err := part.start.Create(ctx)
 	if err != nil {
 		return err
 	}
 	edges := make([]graph.Edge, 0)
-	for _, pathPart := range part.Path {
-		_, targetNode, err := pathPart.Node.Create(ctx)
+	for _, pathPart := range part.path {
+		_, targetNode, err := pathPart.node.Create(ctx)
 		if err != nil {
 			return err
 		}
-		edge, err := pathPart.Rel.Create(ctx, lastNode, targetNode)
+		edge, err := pathPart.rel.Create(ctx, lastNode, targetNode)
 		if err != nil {
 			return err
 		}
 		edges = append(edges, edge)
 		lastNode = targetNode
 	}
-	if part.Var != nil {
+	if part.variable != nil {
 		if len(edges) == 0 {
-			ctx.SetVar(string(*part.Var), ValueOf(lastNode))
+			ctx.SetVar(string(*part.variable), ValueOf(lastNode))
 		} else {
-			ctx.SetVar(string(*part.Var), ValueOf(edges))
+			ctx.SetVar(string(*part.variable), ValueOf(edges))
 		}
 	}
 	return nil
 }
 
-func (rel RelationshipPattern) Create(ctx *EvalContext, from, to graph.Node) (graph.Edge, error) {
-	if rel.Range != nil {
+func (rel relationshipPattern) Create(ctx *EvalContext, from, to graph.Node) (graph.Edge, error) {
+	if rel.rng != nil {
 		return nil, fmt.Errorf("Cannot specify range in CREATE")
 	}
-	if rel.RelTypes != nil && len(rel.RelTypes.Rel) > 1 {
+	if rel.relTypes != nil && len(rel.relTypes.rel) > 1 {
 		return nil, fmt.Errorf("Multiple labels for an edge")
 	}
 	var varName string
-	if rel.Var != nil {
-		varName = string(*rel.Var)
+	if rel.variable != nil {
+		varName = string(*rel.variable)
 		// Is the var defined already
 		_, err := ctx.GetVar(varName)
 		if err == nil {
@@ -313,17 +313,17 @@ func (rel RelationshipPattern) Create(ctx *EvalContext, from, to graph.Node) (gr
 		}
 	}
 	var label string
-	if rel.RelTypes != nil && len(rel.RelTypes.Rel) == 1 {
-		label = rel.RelTypes.Rel[0].String()
+	if rel.relTypes != nil && len(rel.relTypes.rel) == 1 {
+		label = rel.relTypes.rel[0].String()
 	}
-	properties, err := rel.Properties.getPropertiesMap(ctx)
+	properties, err := rel.properties.getPropertiesMap(ctx)
 	if err != nil {
 		return nil, err
 	}
 	var edge graph.Edge
-	if rel.ToLeft && !rel.ToRight {
+	if rel.toLeft && !rel.toRight {
 		edge = ctx.graph.NewEdge(to, from, label, properties)
-	} else if !rel.ToLeft && rel.ToRight {
+	} else if !rel.toLeft && rel.toRight {
 		edge = ctx.graph.NewEdge(from, to, label, properties)
 	} else {
 		return nil, fmt.Errorf("Ambiguous edge direction")

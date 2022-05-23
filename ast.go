@@ -18,66 +18,66 @@ type RegularQuery struct {
 }
 
 type union struct {
-	All         bool
-	SingleQuery Evaluatable
+	all         bool
+	singleQuery Evaluatable
 }
 
 type singlePartQuery struct {
-	Read   []ReadingClause
-	Update []UpdatingClause
-	Return *ReturnClause
+	read   []ReadingClause
+	update []UpdatingClause
+	ret    *returnClause
 }
 
 type create struct {
-	Pattern Pattern
+	pattern Pattern
 }
 
 type deleteClause struct {
-	Detach bool
-	Exprs  []Expression
+	detach bool
+	exprs  []Expression
 }
 
 type remove struct {
-	Items []removeItem
+	items []removeItem
 }
 
 type removeItem struct {
-	Variable   *Variable
-	NodeLabels NodeLabels
-	Property   *propertyExpression
+	variable   *Variable
+	nodeLabels NodeLabels
+	property   *propertyExpression
 }
 
 type set struct {
-	Items []setItem
+	items []setItem
 }
 
 type setItem struct {
-	Property   *propertyExpression
-	Variable   *Variable
-	Op         string
-	Expression Expression
-	NodeLabels NodeLabels
+	property   *propertyExpression
+	variable   *Variable
+	op         string
+	expression Expression
+	nodeLabels NodeLabels
 }
 
 type propertyExpression struct {
-	Atom   Atom
-	Lookup []SchemaName
+	atom   Atom
+	lookup []schemaName
 }
 
 type multiPartQueryPart struct {
-	Read   []ReadingClause
-	Update []UpdatingClause
-	With   withClause
+	read   []ReadingClause
+	update []UpdatingClause
+	with   withClause
 }
 
 type withClause struct {
-	Projection ProjectionBody
-	Where      Expression
+	projection projectionBody
+	where      Expression
 }
 
 type multiPartQuery struct {
-	Parts       []multiPartQueryPart
-	SingleQuery singlePartQuery
+	parts       []multiPartQueryPart
+	singleQuery singlePartQuery
 }
 
 type ReadingClause interface {
@@ -94,140 +94,140 @@ type Expression interface {
 }
 
 type unwind struct {
-	Expr Expression
-	As   Variable
+	expr Expression
+	as   Variable
 }
 
 type orExpression struct {
-	Parts []Evaluatable
+	parts []Evaluatable
 }
 type xorExpression struct {
-	Parts []Evaluatable
+	parts []Evaluatable
 }
 type andExpression struct {
-	Parts []Evaluatable
+	parts []Evaluatable
 }
 
 type notExpression struct {
-	Part Expression
+	part Expression
 }
 type comparisonExpression struct {
-	First  Expression
-	Second []partialComparisonExpression
+	first  Expression
+	second []partialComparisonExpression
 }
 
 type partialComparisonExpression struct {
-	Op   string
-	Expr Expression
+	op   string
+	expr Expression
 }
 
 type addOrSubtractExpression struct {
-	Add []Expression
-	Sub []Expression
+	add []Expression
+	sub []Expression
 
 	constValue Value
 }
 
-type MultiplyDivideModuloExpression struct {
-	Parts []MultiplyDivideModuloExpressionPart
+type multiplyDivideModuloExpression struct {
+	parts []multiplyDivideModuloExpressionPart
 
 	constValue Value
 }
 
-type MultiplyDivideModuloExpressionPart struct {
+type multiplyDivideModuloExpressionPart struct {
 	// For the first element of parts, Op=0
-	Op   rune
-	Expr Evaluatable
+	op   rune
+	expr Evaluatable
 }
 
-type PowerOfExpression struct {
-	Parts []Evaluatable
+type powerOfExpression struct {
+	parts []Evaluatable
 
 	constValue Value
 }
 
-type UnaryAddOrSubtractExpression struct {
-	Neg  bool
-	Expr StringListNullOperatorExpression
+type unaryAddOrSubtractExpression struct {
+	neg  bool
+	expr stringListNullOperatorExpression
 
 	constValue Value
 }
 
-type StringListNullOperatorExpression struct {
-	PropertyOrLabels PropertyOrLabelsExpression
-	Parts            []StringListNullOperatorExpressionPart
+type stringListNullOperatorExpression struct {
+	propertyOrLabels propertyOrLabelsExpression
+	parts            []stringListNullOperatorExpressionPart
 }
 
-type StringListNullOperatorExpressionPart struct {
-	String    *StringOperatorExpression
-	ListIn    Expression
-	ListIndex Expression
-	ListRange *ListRangeExpression
-	IsNull    *bool
+type stringListNullOperatorExpressionPart struct {
+	stringOp  *stringOperatorExpression
+	listIn    Expression
+	listIndex Expression
+	listRange *listRangeExpression
+	isNull    *bool
 }
 
-type ListRangeExpression struct {
-	First  Expression
-	Second Expression
+type listRangeExpression struct {
+	first  Expression
+	second Expression
 }
 
-type StringOperatorExpression struct {
-	Operator string
-	Expr     Expression
+type stringOperatorExpression struct {
+	operator string
+	expr     Expression
 }
 
-type PropertyOrLabelsExpression struct {
-	Atom           Atom
-	PropertyLookup []SchemaName
-	NodeLabels     *NodeLabels
+type propertyOrLabelsExpression struct {
+	atom           Atom
+	propertyLookup []schemaName
+	nodeLabels     *NodeLabels
 }
 
-type RelationshipTypes struct {
-	Rel []SchemaName
+type relationshipTypes struct {
+	rel []schemaName
 }
 
-type ReturnClause struct {
-	Projection ProjectionBody
+type returnClause struct {
+	projection projectionBody
 }
 
-type ProjectionBody struct {
-	Distinct bool
-	Items    ProjectionItems
-	Order    *Order
-	Skip     Expression
-	Limit    Expression
+type projectionBody struct {
+	distinct bool
+	items    projectionItems
+	order    *order
+	skip     Expression
+	limit    Expression
 }
 
-type ProjectionItems struct {
-	All   bool
-	Items []ProjectionItem
+type projectionItems struct {
+	all   bool
+	items []projectionItem
 }
 
-type ProjectionItem struct {
-	Var  *Variable
-	Expr Expression
+type projectionItem struct {
+	variable *Variable
+	expr     Expression
 }
 
-type Order struct {
-	Items []SortItem
+type order struct {
+	items []sortItem
 }
 
-type SortItem struct {
-	Asc  bool
-	Expr Expression
+type sortItem struct {
+	asc  bool
+	expr Expression
 }
 
-type SchemaName struct {
-	*SymbolicName
-	*ReservedWord
+type schemaName struct {
+	*symbolicName
+	*reservedWord
 }
 
-func (s SchemaName) String() string {
-	if s.SymbolicName != nil {
-		return string(*s.SymbolicName)
+func (s schemaName) String() string {
+	if s.symbolicName != nil {
+		return string(*s.symbolicName)
 	}
-	if s.ReservedWord != nil {
-		return string(*s.ReservedWord)
+	if s.reservedWord != nil {
+		return string(*s.reservedWord)
 	}
 	return ""
 }
@@ -240,133 +240,133 @@ type Match struct {
 	Pattern  Pattern
 	Where    Expression
 }
-type NodeLabels []SchemaName
+type NodeLabels []schemaName
 
-type SymbolicName string
-type ReservedWord string
+type symbolicName string
+type reservedWord string
 
-type Variable SymbolicName
+type Variable symbolicName
 
 type Pattern struct {
 	Parts []PatternPart
 }
 
 type PatternPart struct {
-	Var   *Variable
-	Start NodePattern
-	Path  []PatternChain
+	variable *Variable
+	start    nodePattern
+	path     []patternChain
 }
 
-type NodePattern struct {
-	Var        *Variable
-	Labels     *NodeLabels
-	Properties *Properties
+type nodePattern struct {
+	variable   *Variable
+	labels     *NodeLabels
+	properties *Properties
 }
 
-type PatternChain struct {
-	Rel  RelationshipPattern
-	Node NodePattern
+type patternChain struct {
+	rel  relationshipPattern
+	node nodePattern
 }
 
-type RelationshipPattern struct {
-	ToLeft     bool
-	ToRight    bool
-	Var        *Variable
-	RelTypes   *RelationshipTypes
-	Range      *RangeLiteral
-	Properties *Properties
+type relationshipPattern struct {
+	toLeft     bool
+	toRight    bool
+	variable   *Variable
+	relTypes   *relationshipTypes
+	rng        *rangeLiteral
+	properties *Properties
 }
 
 type Parameter string
 
 type Properties struct {
-	Map   *MapLiteral
+	Map   *mapLiteral
 	Param *Parameter
 }
 
-type CountAtom struct{}
+type countAtom struct{}
 
-type FilterAtom struct {
-	Op     string
-	Filter FilterExpression
+type filterAtom struct {
+	op     string
+	filter filterExpression
 }
 
 type Atom interface {
 	Evaluatable
 }
 
-type FilterExpression struct {
-	Variable Variable
-	InExpr   Expression
-	Where    Expression
+type filterExpression struct {
+	variable Variable
+	inExpr   Expression
+	where    Expression
 }
 
 type Filter struct {
 	// TODO: Derived from filter expression
 }
 
-type RelationshipsPattern struct {
-	Start NodePattern
-	Chain []PatternChain
+type relationshipsPattern struct {
+	start nodePattern
+	chain []patternChain
 }
 
-type ListComprehension struct {
-	Filter FilterExpression
-	Expr   Expression
+type listComprehension struct {
+	filter filterExpression
+	expr   Expression
 }
 
-type FunctionInvocation struct {
-	Name     []SymbolicName
-	Distinct bool
-	Args     []Expression
+type functionInvocation struct {
+	name     []symbolicName
+	distinct bool
+	args     []Expression
 
-	function Function
-	args     []Evaluatable
+	function   Function
+	parsedArgs []Evaluatable
 }
 
-type PatternComprehension struct {
-	Var   *Variable
-	Rel   RelationshipsPattern
-	Where Expression
-	Expr  Expression
+type patternComprehension struct {
+	variable *Variable
+	rel      relationshipsPattern
+	where    Expression
+	expr     Expression
 }
 
-type Case struct {
-	Test         Expression
-	Alternatives []CaseAlternative
-	Default      Expression
+type caseClause struct {
+	test         Expression
+	alternatives []caseAlternative
+	def          Expression
 }
 
-type CaseAlternative struct {
-	When Expression
-	Then Expression
+type caseAlternative struct {
+	when Expression
+	then Expression
 }
 
-type NullLiteral struct{}
-type StringLiteral string
-type DoubleLiteral float64
-type IntLiteral int
-type BooleanLiteral bool
+type nullLiteral struct{}
+type stringLiteral string
+type doubleLiteral float64
+type intLiteral int
+type booleanLiteral bool
 
-type RangeLiteral struct {
-	From, To *IntLiteral
+type rangeLiteral struct {
+	from, to *intLiteral
 }
 
-type ListLiteral struct {
-	Values []Expression
+type listLiteral struct {
+	values []Expression
 
 	constValue Value
 }
 
-type MapLiteral struct {
-	KeyValues []MapKeyValue
+type mapLiteral struct {
+	keyValues []mapKeyValue
 
 	constValue Value
 }
 
-type MapKeyValue struct {
-	Key   string
-	Value Expression
+type mapKeyValue struct {
+	key   string
+	value Expression
 }
 
 func oC_Cypher(ctx *parser.OC_CypherContext) Evaluatable {
@@ -396,8 +396,8 @@ func oC_RegularQuery(ctx *parser.OC_RegularQueryContext) RegularQuery {
 
 func oC_Union(ctx *parser.OC_UnionContext) union {
 	return union{
-		All:         ctx.ALL() != nil,
-		SingleQuery: oC_SingleQuery(ctx.OC_SingleQuery().(*parser.OC_SingleQueryContext)),
+		all:         ctx.ALL() != nil,
+		singleQuery: oC_SingleQuery(ctx.OC_SingleQuery().(*parser.OC_SingleQueryContext)),
 	}
 }
 
@@ -411,14 +411,14 @@ func oC_SingleQuery(ctx *parser.OC_SingleQueryContext) Evaluatable {
 func oC_SinglePartQuery(ctx *parser.OC_SinglePartQueryContext) singlePartQuery {
 	ret := singlePartQuery{}
 	for _, r := range ctx.AllOC_ReadingClause() {
-		ret.Read = append(ret.Read, oC_ReadingClause(r.(*parser.OC_ReadingClauseContext)))
+		ret.read = append(ret.read, oC_ReadingClause(r.(*parser.OC_ReadingClauseContext)))
 	}
 	for _, u := range ctx.AllOC_UpdatingClause() {
-		ret.Update = append(ret.Update, oC_UpdatingClause(u.(*parser.OC_UpdatingClauseContext)))
+		ret.update = append(ret.update, oC_UpdatingClause(u.(*parser.OC_UpdatingClauseContext)))
 	}
 	if x := ctx.OC_Return(); x != nil {
 		r := oC_Return(x.(*parser.OC_ReturnContext))
-		ret.Return = &r
+		ret.ret = &r
 	}
 	return ret
 }
@@ -426,39 +426,39 @@ func oC_SinglePartQuery(ctx *parser.OC_SinglePartQueryContext) singlePartQuery {
 //oC_MultiPartQuery
 //              :  ( ( oC_ReadingClause SP? )* ( oC_UpdatingClause SP? )* oC_With SP? )+ oC_SinglePartQuery ;
 func oC_MultiPartQuery(ctx *parser.OC_MultiPartQueryContext) multiPartQuery {
-	ret := multiPartQuery{Parts: []multiPartQueryPart{}}
+	ret := multiPartQuery{parts: []multiPartQueryPart{}}
 	count := ctx.GetChildCount()
 	lastIsFull := true
 	for child := 0; child < count; child++ {
 		ch := ctx.GetChild(child)
-		lastPart := &ret.Parts[len(ret.Parts)-1]
+		lastPart := &ret.parts[len(ret.parts)-1]
 		switch expr := ch.(type) {
 		case *parser.OC_ReadingClauseContext:
-			lastPart.Read = append(lastPart.Read, oC_ReadingClause(expr))
+			lastPart.read = append(lastPart.read, oC_ReadingClause(expr))
 			lastIsFull = true
 		case *parser.OC_UpdatingClauseContext:
-			lastPart.Update = append(lastPart.Update, oC_UpdatingClause(expr))
+			lastPart.update = append(lastPart.update, oC_UpdatingClause(expr))
 			lastIsFull = true
 		case *parser.OC_WithContext:
-			lastPart.With = oC_With(expr)
-			ret.Parts = append(ret.Parts, multiPartQueryPart{})
+			lastPart.with = oC_With(expr)
+			ret.parts = append(ret.parts, multiPartQueryPart{})
 			lastIsFull = false
 		case *parser.OC_SinglePartQueryContext:
-			ret.SingleQuery = oC_SinglePartQuery(expr)
+			ret.singleQuery = oC_SinglePartQuery(expr)
 		}
 	}
 	if !lastIsFull {
-		ret.Parts = ret.Parts[:len(ret.Parts)-1]
+		ret.parts = ret.parts[:len(ret.parts)-1]
 	}
 	return ret
 }
 
 func oC_With(ctx *parser.OC_WithContext) withClause {
 	ret := withClause{
-		Projection: oC_ProjectionBody(ctx.OC_ProjectionBody().(*parser.OC_ProjectionBodyContext)),
+		projection: oC_ProjectionBody(ctx.OC_ProjectionBody().(*parser.OC_ProjectionBodyContext)),
 	}
 	if w := ctx.OC_Where(); w != nil {
-		ret.Where = oC_Where(w.(*parser.OC_WhereContext))
+		ret.where = oC_Where(w.(*parser.OC_WhereContext))
 	}
 	return ret
 }
@@ -489,66 +489,66 @@ func oC_UpdatingClause(ctx *parser.OC_UpdatingClauseContext) UpdatingClause {
 	return oC_Remove(ctx.OC_Remove().(*parser.OC_RemoveContext))
 }
 
-func oC_Return(ctx *parser.OC_ReturnContext) ReturnClause {
-	return ReturnClause{
-		Projection: oC_ProjectionBody(ctx.OC_ProjectionBody().(*parser.OC_ProjectionBodyContext)),
+func oC_Return(ctx *parser.OC_ReturnContext) returnClause {
+	return returnClause{
+		projection: oC_ProjectionBody(ctx.OC_ProjectionBody().(*parser.OC_ProjectionBodyContext)),
 	}
 }
 
-func oC_ProjectionBody(ctx *parser.OC_ProjectionBodyContext) ProjectionBody {
-	ret := ProjectionBody{
-		Distinct: ctx.DISTINCT() != nil,
-		Items:    oC_ProjectionItems(ctx.OC_ProjectionItems().(*parser.OC_ProjectionItemsContext)),
+func oC_ProjectionBody(ctx *parser.OC_ProjectionBodyContext) projectionBody {
+	ret := projectionBody{
+		distinct: ctx.DISTINCT() != nil,
+		items:    oC_ProjectionItems(ctx.OC_ProjectionItems().(*parser.OC_ProjectionItemsContext)),
 	}
 	if o := ctx.OC_Order(); o != nil {
 		x := oC_Order(o.(*parser.OC_OrderContext))
-		ret.Order = &x
+		ret.order = &x
 	}
 	if s := ctx.OC_Skip(); s != nil {
-		ret.Skip = oC_Skip(s.(*parser.OC_SkipContext))
+		ret.skip = oC_Skip(s.(*parser.OC_SkipContext))
 	}
 	if l := ctx.OC_Limit(); l != nil {
-		ret.Limit = oC_Limit(l.(*parser.OC_LimitContext))
+		ret.limit = oC_Limit(l.(*parser.OC_LimitContext))
 	}
 	return ret
 }
 
-func oC_ProjectionItems(ctx *parser.OC_ProjectionItemsContext) ProjectionItems {
-	ret := ProjectionItems{}
+func oC_ProjectionItems(ctx *parser.OC_ProjectionItemsContext) projectionItems {
+	ret := projectionItems{}
 	if item, ok := ctx.GetChild(0).(antlr.TerminalNode); ok {
 		if item.GetText() == "*" {
-			ret.All = true
+			ret.all = true
 		}
 	}
 	for _, x := range ctx.AllOC_ProjectionItem() {
-		ret.Items = append(ret.Items, oC_ProjectionItem(x.(*parser.OC_ProjectionItemContext)))
+		ret.items = append(ret.items, oC_ProjectionItem(x.(*parser.OC_ProjectionItemContext)))
 	}
 	return ret
 }
 
-func oC_ProjectionItem(ctx *parser.OC_ProjectionItemContext) ProjectionItem {
-	ret := ProjectionItem{
-		Expr: oC_Expression(ctx.OC_Expression().(*parser.OC_ExpressionContext)),
+func oC_ProjectionItem(ctx *parser.OC_ProjectionItemContext) projectionItem {
+	ret := projectionItem{
+		expr: oC_Expression(ctx.OC_Expression().(*parser.OC_ExpressionContext)),
 	}
 	if v := ctx.OC_Variable(); v != nil {
 		x := oC_Variable(v.(*parser.OC_VariableContext))
-		ret.Var = &x
+		ret.variable = &x
 	}
 	return ret
 }
 
-func oC_Order(ctx *parser.OC_OrderContext) Order {
-	ret := Order{}
+func oC_Order(ctx *parser.OC_OrderContext) order {
+	ret := order{}
 	for _, x := range ctx.AllOC_SortItem() {
-		ret.Items = append(ret.Items, oC_SortItem(x.(*parser.OC_SortItemContext)))
+		ret.items = append(ret.items, oC_SortItem(x.(*parser.OC_SortItemContext)))
 	}
 	return ret
 }
 
-func oC_SortItem(ctx *parser.OC_SortItemContext) SortItem {
-	ret := SortItem{
-		Expr: oC_Expression(ctx.OC_Expression().(*parser.OC_ExpressionContext)),
-		Asc:  ctx.ASCENDING() != nil || ctx.ASC() != nil,
+func oC_SortItem(ctx *parser.OC_SortItemContext) sortItem {
+	ret := sortItem{
+		expr: oC_Expression(ctx.OC_Expression().(*parser.OC_ExpressionContext)),
+		asc:  ctx.ASCENDING() != nil || ctx.ASC() != nil,
 	}
 	return ret
 }
@@ -583,10 +583,10 @@ func oC_Expression(ctx *parser.OC_ExpressionContext) Expression {
 func oC_OrExpression(ctx *parser.OC_OrExpressionContext) Expression {
 	ret := orExpression{}
 	for _, x := range ctx.AllOC_XorExpression() {
-		ret.Parts = append(ret.Parts, oC_XorExpression(x.(*parser.OC_XorExpressionContext)))
+		ret.parts = append(ret.parts, oC_XorExpression(x.(*parser.OC_XorExpressionContext)))
 	}
-	if len(ret.Parts) == 1 {
-		return ret.Parts[0]
+	if len(ret.parts) == 1 {
+		return ret.parts[0]
 	}
 	return ret
 }
@@ -594,10 +594,10 @@ func oC_OrExpression(ctx *parser.OC_OrExpressionContext) Expression {
 func oC_XorExpression(ctx *parser.OC_XorExpressionContext) Expression {
 	ret := xorExpression{}
 	for _, x := range ctx.AllOC_AndExpression() {
-		ret.Parts = append(ret.Parts, oC_AndExpression(x.(*parser.OC_AndExpressionContext)))
+		ret.parts = append(ret.parts, oC_AndExpression(x.(*parser.OC_AndExpressionContext)))
 	}
-	if len(ret.Parts) == 1 {
-		return ret.Parts[0]
+	if len(ret.parts) == 1 {
+		return ret.parts[0]
 	}
 	return ret
 }
@@ -605,10 +605,10 @@ func oC_XorExpression(ctx *parser.OC_XorExpressionContext) Expression {
 func oC_AndExpression(ctx *parser.OC_AndExpressionContext) Expression {
 	ret := andExpression{}
 	for _, x := range ctx.AllOC_NotExpression() {
-		ret.Parts = append(ret.Parts, oC_NotExpression(x.(*parser.OC_NotExpressionContext)))
+		ret.parts = append(ret.parts, oC_NotExpression(x.(*parser.OC_NotExpressionContext)))
 	}
-	if len(ret.Parts) == 1 {
-		return ret.Parts[0]
+	if len(ret.parts) == 1 {
+		return ret.parts[0]
 	}
 	return ret
 }
@@ -616,7 +616,7 @@ func oC_AndExpression(ctx *parser.OC_AndExpressionContext) Expression {
 func oC_NotExpression(ctx *parser.OC_NotExpressionContext) Expression {
 	if len(ctx.AllNOT())%2 == 1 {
 		return notExpression{
-			Part: oC_ComparisonExpression(ctx.OC_ComparisonExpression().(*parser.OC_ComparisonExpressionContext)),
+			part: oC_ComparisonExpression(ctx.OC_ComparisonExpression().(*parser.OC_ComparisonExpressionContext)),
 		}
 	}
 	return oC_ComparisonExpression(ctx.OC_ComparisonExpression().(*parser.OC_ComparisonExpressionContext))
@@ -624,13 +624,13 @@ func oC_NotExpression(ctx *parser.OC_NotExpressionContext) Expression {
 
 func oC_ComparisonExpression(ctx *parser.OC_ComparisonExpressionContext) Expression {
 	ret := comparisonExpression{
-		First: oC_AddOrSubtractExpression(ctx.OC_AddOrSubtractExpression().(*parser.OC_AddOrSubtractExpressionContext)),
+		first: oC_AddOrSubtractExpression(ctx.OC_AddOrSubtractExpression().(*parser.OC_AddOrSubtractExpressionContext)),
 	}
 	for _, x := range ctx.AllOC_PartialComparisonExpression() {
-		ret.Second = append(ret.Second, oC_PartialComparisonExpression(x.(*parser.OC_PartialComparisonExpressionContext)))
+		ret.second = append(ret.second, oC_PartialComparisonExpression(x.(*parser.OC_PartialComparisonExpressionContext)))
 	}
-	if len(ret.Second) == 0 {
-		return ret.First
+	if len(ret.second) == 0 {
+		return ret.first
 	}
 	return ret
 }
@@ -643,7 +643,7 @@ func oC_ComparisonExpression(ctx *parser.OC_ComparisonExpressionContext) Express
 //
 func oC_AddOrSubtractExpression(ctx *parser.OC_AddOrSubtractExpressionContext) Expression {
 	ret := &addOrSubtractExpression{}
-	target := &ret.Add
+	target := &ret.add
 	count := ctx.GetChildCount()
 	for child := 0; child < count; child++ {
 		ch := ctx.GetChild(child)
@@ -654,15 +654,15 @@ func oC_AddOrSubtractExpression(ctx *parser.OC_AddOrSubtractExpressionContext) E
 			term, ok := ch.(antlr.TerminalNode)
 			if ok {
 				if term.GetText() == "+" {
-					target = &ret.Add
+					target = &ret.add
 				} else if term.GetText() == "-" {
-					target = &ret.Sub
+					target = &ret.sub
 				}
 			}
 		}
 	}
-	if len(ret.Add) == 1 && len(ret.Sub) == 0 {
-		return ret.Add[0]
+	if len(ret.add) == 1 && len(ret.sub) == 0 {
+		return ret.add[0]
 	}
 	return ret
 }
@@ -673,16 +673,16 @@ func oC_AddOrSubtractExpression(ctx *parser.OC_AddOrSubtractExpressionContext) E
 //          ( SP? '/' SP? oC_PowerOfExpression ) |
 //          ( SP? '%' SP? oC_PowerOfExpression ) )* ;
 func oC_MultiplyDivideModuloExpression(ctx *parser.OC_MultiplyDivideModuloExpressionContext) Expression {
-	ret := &MultiplyDivideModuloExpression{}
+	ret := &multiplyDivideModuloExpression{}
 	count := ctx.GetChildCount()
 	var lastOp rune
 	for child := 0; child < count; child++ {
 		ch := ctx.GetChild(child)
 		expr, ok := ch.(*parser.OC_PowerOfExpressionContext)
 		if ok {
-			ret.Parts = append(ret.Parts, MultiplyDivideModuloExpressionPart{
-				Op:   lastOp,
-				Expr: oC_PowerOfExpression(expr),
+			ret.parts = append(ret.parts, multiplyDivideModuloExpressionPart{
+				op:   lastOp,
+				expr: oC_PowerOfExpression(expr),
 			})
 		} else {
 			term, ok := ch.(antlr.TerminalNode)
@@ -694,8 +694,8 @@ func oC_MultiplyDivideModuloExpression(ctx *parser.OC_MultiplyDivideModuloExpres
 			}
 		}
 	}
-	if len(ret.Parts) == 1 {
-		return ret.Parts[0].Expr
+	if len(ret.parts) == 1 {
+		return ret.parts[0].expr
 	}
 	return ret
 }
@@ -703,154 +703,154 @@ func oC_MultiplyDivideModuloExpression(ctx *parser.OC_MultiplyDivideModuloExpres
 // oC_PowerOfExpression :
 //          oC_UnaryAddOrSubtractExpression ( SP? '^' SP? oC_UnaryAddOrSubtractExpression )* ;
 func oC_PowerOfExpression(ctx *parser.OC_PowerOfExpressionContext) Evaluatable {
-	ret := PowerOfExpression{}
+	ret := powerOfExpression{}
 	for _, x := range ctx.AllOC_UnaryAddOrSubtractExpression() {
-		ret.Parts = append(ret.Parts, oC_UnaryAddOrSubtractExpression(x.(*parser.OC_UnaryAddOrSubtractExpressionContext)))
+		ret.parts = append(ret.parts, oC_UnaryAddOrSubtractExpression(x.(*parser.OC_UnaryAddOrSubtractExpressionContext)))
 	}
-	if len(ret.Parts) == 1 {
-		return ret.Parts[0]
+	if len(ret.parts) == 1 {
+		return ret.parts[0]
 	}
 	return &ret
 }
 
 func oC_UnaryAddOrSubtractExpression(ctx *parser.OC_UnaryAddOrSubtractExpressionContext) Evaluatable {
-	ret := UnaryAddOrSubtractExpression{}
+	ret := unaryAddOrSubtractExpression{}
 	for child := 0; child < ctx.GetChildCount(); child++ {
 		ch := ctx.GetChild(child)
 		if tok, ok := ch.(antlr.TerminalNode); ok {
 			if tok.GetText() == "-" {
-				ret.Neg = !ret.Neg
+				ret.neg = !ret.neg
 			}
 		} else if expr, ok := ch.(*parser.OC_StringListNullOperatorExpressionContext); ok {
-			ret.Expr = oC_StringListNullOperatorExpression(expr)
+			ret.expr = oC_StringListNullOperatorExpression(expr)
 		}
 	}
-	if !ret.Neg {
-		return ret.Expr
+	if !ret.neg {
+		return ret.expr
 	}
 	return &ret
 }
 
-func oC_StringListNullOperatorExpression(ctx *parser.OC_StringListNullOperatorExpressionContext) StringListNullOperatorExpression {
-	var ret StringListNullOperatorExpression
+func oC_StringListNullOperatorExpression(ctx *parser.OC_StringListNullOperatorExpressionContext) stringListNullOperatorExpression {
+	var ret stringListNullOperatorExpression
 	for child := 0; child < ctx.GetChildCount(); child++ {
 		switch t := ctx.GetChild(child).(type) {
 		case *parser.OC_PropertyOrLabelsExpressionContext:
-			ret.PropertyOrLabels = oC_PropertyOrLabelsExpression(t)
+			ret.propertyOrLabels = oC_PropertyOrLabelsExpression(t)
 		case *parser.OC_StringOperatorExpressionContext:
-			ret.Parts = append(ret.Parts, oC_StringOperatorExpression(t))
+			ret.parts = append(ret.parts, oC_StringOperatorExpression(t))
 		case *parser.OC_ListOperatorExpressionContext:
-			ret.Parts = append(ret.Parts, oC_ListOperatorExpression(t))
+			ret.parts = append(ret.parts, oC_ListOperatorExpression(t))
 		case *parser.OC_NullOperatorExpressionContext:
-			ret.Parts = append(ret.Parts, oC_NullOperatorExpression(t))
+			ret.parts = append(ret.parts, oC_NullOperatorExpression(t))
 		}
 	}
 	return ret
 }
 
-func oC_ListOperatorExpression(ctx *parser.OC_ListOperatorExpressionContext) StringListNullOperatorExpressionPart {
+func oC_ListOperatorExpression(ctx *parser.OC_ListOperatorExpressionContext) stringListNullOperatorExpressionPart {
 	if x := ctx.OC_PropertyOrLabelsExpression(); x != nil {
-		return StringListNullOperatorExpressionPart{
-			ListIn: oC_PropertyOrLabelsExpression(x.(*parser.OC_PropertyOrLabelsExpressionContext)),
+		return stringListNullOperatorExpressionPart{
+			listIn: oC_PropertyOrLabelsExpression(x.(*parser.OC_PropertyOrLabelsExpressionContext)),
 		}
 	}
 	expr := ctx.AllOC_Expression()
 	if len(expr) == 1 {
-		return StringListNullOperatorExpressionPart{
-			ListIndex: oC_Expression(expr[0].(*parser.OC_ExpressionContext)),
+		return stringListNullOperatorExpressionPart{
+			listIndex: oC_Expression(expr[0].(*parser.OC_ExpressionContext)),
 		}
 	}
-	return StringListNullOperatorExpressionPart{
-		ListRange: &ListRangeExpression{
-			First:  oC_Expression(expr[0].(*parser.OC_ExpressionContext)),
-			Second: oC_Expression(expr[1].(*parser.OC_ExpressionContext)),
+	return stringListNullOperatorExpressionPart{
+		listRange: &listRangeExpression{
+			first:  oC_Expression(expr[0].(*parser.OC_ExpressionContext)),
+			second: oC_Expression(expr[1].(*parser.OC_ExpressionContext)),
 		}}
 }
 
-func oC_StringOperatorExpression(ctx *parser.OC_StringOperatorExpressionContext) StringListNullOperatorExpressionPart {
-	ret := StringListNullOperatorExpressionPart{
-		String: &StringOperatorExpression{
-			Expr: oC_PropertyOrLabelsExpression(ctx.OC_PropertyOrLabelsExpression().(*parser.OC_PropertyOrLabelsExpressionContext)),
+func oC_StringOperatorExpression(ctx *parser.OC_StringOperatorExpressionContext) stringListNullOperatorExpressionPart {
+	ret := stringListNullOperatorExpressionPart{
+		stringOp: &stringOperatorExpression{
+			expr: oC_PropertyOrLabelsExpression(ctx.OC_PropertyOrLabelsExpression().(*parser.OC_PropertyOrLabelsExpressionContext)),
 		},
 	}
 	if ctx.STARTS() != nil {
-		ret.String.Operator = "STARTS"
+		ret.stringOp.operator = "STARTS"
 	}
 	if ctx.ENDS() != nil {
-		ret.String.Operator = "ENDS"
+		ret.stringOp.operator = "ENDS"
 	}
 	if ctx.CONTAINS() != nil {
-		ret.String.Operator = "CONTAINS"
+		ret.stringOp.operator = "CONTAINS"
 	}
 	return ret
 }
 
-func oC_NullOperatorExpression(ctx *parser.OC_NullOperatorExpressionContext) StringListNullOperatorExpressionPart {
+func oC_NullOperatorExpression(ctx *parser.OC_NullOperatorExpressionContext) stringListNullOperatorExpressionPart {
 	val := ctx.NOT() == nil
-	return StringListNullOperatorExpressionPart{
-		IsNull: &val,
+	return stringListNullOperatorExpressionPart{
+		isNull: &val,
 	}
 }
 
-func oC_PropertyOrLabelsExpression(ctx *parser.OC_PropertyOrLabelsExpressionContext) PropertyOrLabelsExpression {
-	ret := PropertyOrLabelsExpression{
-		Atom: oC_Atom(ctx.OC_Atom().(*parser.OC_AtomContext)),
+func oC_PropertyOrLabelsExpression(ctx *parser.OC_PropertyOrLabelsExpressionContext) propertyOrLabelsExpression {
+	ret := propertyOrLabelsExpression{
+		atom: oC_Atom(ctx.OC_Atom().(*parser.OC_AtomContext)),
 	}
 	for _, x := range ctx.AllOC_PropertyLookup() {
-		ret.PropertyLookup = append(ret.PropertyLookup, oC_PropertyLookup(x.(*parser.OC_PropertyLookupContext)))
+		ret.propertyLookup = append(ret.propertyLookup, oC_PropertyLookup(x.(*parser.OC_PropertyLookupContext)))
 	}
 	if l := ctx.OC_NodeLabels(); l != nil {
 		x := oC_NodeLabels(l.(*parser.OC_NodeLabelsContext))
-		ret.NodeLabels = &x
+		ret.nodeLabels = &x
 	}
 	return ret
 }
 
 func oC_PartialComparisonExpression(ctx *parser.OC_PartialComparisonExpressionContext) partialComparisonExpression {
-	ret := partialComparisonExpression{Expr: oC_AddOrSubtractExpression(ctx.OC_AddOrSubtractExpression().(*parser.OC_AddOrSubtractExpressionContext))}
+	ret := partialComparisonExpression{expr: oC_AddOrSubtractExpression(ctx.OC_AddOrSubtractExpression().(*parser.OC_AddOrSubtractExpressionContext))}
 	for i := 0; i < ctx.GetChildCount(); i++ {
 		if tok, ok := ctx.GetChild(i).(antlr.TerminalNode); ok {
 			t := tok.GetText()
 			if t == "=" || t == "<>" || t == "<" || t == ">" || t == "<=" || t == "=>" {
-				ret.Op = t
+				ret.op = t
 			}
 		}
 	}
 	return ret
 }
 
-func oC_PropertyLookup(ctx *parser.OC_PropertyLookupContext) SchemaName {
+func oC_PropertyLookup(ctx *parser.OC_PropertyLookupContext) schemaName {
 	return oC_PropertyKeyName(ctx.OC_PropertyKeyName().(*parser.OC_PropertyKeyNameContext))
 }
 
-func oC_PropertyKeyName(ctx *parser.OC_PropertyKeyNameContext) SchemaName {
+func oC_PropertyKeyName(ctx *parser.OC_PropertyKeyNameContext) schemaName {
 	return oC_SchemaName(ctx.OC_SchemaName().(*parser.OC_SchemaNameContext))
 }
 
-func oC_SchemaName(ctx *parser.OC_SchemaNameContext) SchemaName {
+func oC_SchemaName(ctx *parser.OC_SchemaNameContext) schemaName {
 	if x := ctx.OC_SymbolicName(); x != nil {
 		name := oC_SymbolicName(ctx.OC_SymbolicName().(*parser.OC_SymbolicNameContext))
-		return SchemaName{SymbolicName: &name}
+		return schemaName{symbolicName: &name}
 	}
 	name := oC_ReservedWord(ctx.OC_ReservedWord().(*parser.OC_ReservedWordContext))
-	return SchemaName{ReservedWord: &name}
+	return schemaName{reservedWord: &name}
 }
 
-func oC_SymbolicName(ctx *parser.OC_SymbolicNameContext) SymbolicName {
+func oC_SymbolicName(ctx *parser.OC_SymbolicNameContext) symbolicName {
 	if node := ctx.EscapedSymbolicName(); node != nil {
 		text := node.GetText()
-		return SymbolicName(text[1 : len(text)-1])
+		return symbolicName(text[1 : len(text)-1])
 	}
-	return SymbolicName(ctx.GetText())
+	return symbolicName(ctx.GetText())
 }
 
-func oC_ReservedWord(ctx *parser.OC_ReservedWordContext) ReservedWord {
-	return ReservedWord(strings.ToUpper(ctx.GetText()))
+func oC_ReservedWord(ctx *parser.OC_ReservedWordContext) reservedWord {
+	return reservedWord(strings.ToUpper(ctx.GetText()))
 }
 
 func oC_NodeLabels(ctx *parser.OC_NodeLabelsContext) NodeLabels {
 	children := ctx.AllOC_NodeLabel()
-	ret := make([]SchemaName, 0, len(children))
+	ret := make([]schemaName, 0, len(children))
 	for _, x := range children {
 		ret = append(ret, oC_SchemaName(x.(*parser.OC_NodeLabelContext).OC_LabelName().(*parser.OC_LabelNameContext).OC_SchemaName().(*parser.OC_SchemaNameContext)))
 	}
@@ -869,74 +869,74 @@ func oC_PatternPart(ctx *parser.OC_PatternPartContext) PatternPart {
 	ret := PatternPart{}
 	if v := ctx.OC_Variable(); v != nil {
 		vr := oC_Variable(v.(*parser.OC_VariableContext))
-		ret.Var = &vr
+		ret.variable = &vr
 	}
-	ret.Start, ret.Path = oC_AnonymousPatternPart(ctx.OC_AnonymousPatternPart().(*parser.OC_AnonymousPatternPartContext))
+	ret.start, ret.path = oC_AnonymousPatternPart(ctx.OC_AnonymousPatternPart().(*parser.OC_AnonymousPatternPartContext))
 	return ret
 }
 
-func oC_AnonymousPatternPart(ctx *parser.OC_AnonymousPatternPartContext) (NodePattern, []PatternChain) {
+func oC_AnonymousPatternPart(ctx *parser.OC_AnonymousPatternPartContext) (nodePattern, []patternChain) {
 	return oC_PatternElement(ctx.OC_PatternElement().(*parser.OC_PatternElementContext))
 }
 
-func oC_PatternElement(ctx *parser.OC_PatternElementContext) (NodePattern, []PatternChain) {
+func oC_PatternElement(ctx *parser.OC_PatternElementContext) (nodePattern, []patternChain) {
 	if p := ctx.OC_PatternElement(); p != nil {
 		return oC_PatternElement(p.(*parser.OC_PatternElementContext))
 	}
 	np := oC_NodePattern(ctx.OC_NodePattern().(*parser.OC_NodePatternContext))
-	chain := make([]PatternChain, 0)
+	chain := make([]patternChain, 0)
 	for _, x := range ctx.AllOC_PatternElementChain() {
 		chain = append(chain, oC_PatternElementChain(x.(*parser.OC_PatternElementChainContext)))
 	}
 	return np, chain
 }
 
-func oC_NodePattern(ctx *parser.OC_NodePatternContext) NodePattern {
-	ret := NodePattern{}
+func oC_NodePattern(ctx *parser.OC_NodePatternContext) nodePattern {
+	ret := nodePattern{}
 	if x := ctx.OC_Variable(); x != nil {
 		v := oC_Variable(x.(*parser.OC_VariableContext))
-		ret.Var = &v
+		ret.variable = &v
 	}
 	if x := ctx.OC_NodeLabels(); x != nil {
 		l := oC_NodeLabels(x.(*parser.OC_NodeLabelsContext))
-		ret.Labels = &l
+		ret.labels = &l
 	}
 	if x := ctx.OC_Properties(); x != nil {
 		o := oC_Properties(x.(*parser.OC_PropertiesContext))
-		ret.Properties = &o
+		ret.properties = &o
 	}
 	return ret
 }
 
-func oC_PatternElementChain(ctx *parser.OC_PatternElementChainContext) PatternChain {
-	return PatternChain{
-		Rel:  oC_RelationshipPattern(ctx.OC_RelationshipPattern().(*parser.OC_RelationshipPatternContext)),
-		Node: oC_NodePattern(ctx.OC_NodePattern().(*parser.OC_NodePatternContext)),
+func oC_PatternElementChain(ctx *parser.OC_PatternElementChainContext) patternChain {
+	return patternChain{
+		rel:  oC_RelationshipPattern(ctx.OC_RelationshipPattern().(*parser.OC_RelationshipPatternContext)),
+		node: oC_NodePattern(ctx.OC_NodePattern().(*parser.OC_NodePatternContext)),
 	}
 }
 
-func oC_RelationshipPattern(ctx *parser.OC_RelationshipPatternContext) RelationshipPattern {
-	ret := RelationshipPattern{
-		ToLeft:  ctx.OC_LeftArrowHead() != nil,
-		ToRight: ctx.OC_RightArrowHead() != nil,
+func oC_RelationshipPattern(ctx *parser.OC_RelationshipPatternContext) relationshipPattern {
+	ret := relationshipPattern{
+		toLeft:  ctx.OC_LeftArrowHead() != nil,
+		toRight: ctx.OC_RightArrowHead() != nil,
 	}
 	if x := ctx.OC_RelationshipDetail(); x != nil {
 		detctx := x.(*parser.OC_RelationshipDetailContext)
 		if x := detctx.OC_Variable(); x != nil {
 			v := oC_Variable(x.(*parser.OC_VariableContext))
-			ret.Var = &v
+			ret.variable = &v
 		}
 		if x := detctx.OC_RelationshipTypes(); x != nil {
 			r := oC_RelationshipTypes(x.(*parser.OC_RelationshipTypesContext))
-			ret.RelTypes = &r
+			ret.relTypes = &r
 		}
 		if x := detctx.OC_RangeLiteral(); x != nil {
 			r := oC_RangeLiteral(x.(*parser.OC_RangeLiteralContext))
-			ret.Range = &r
+			ret.rng = &r
 		}
 		if x := detctx.OC_Properties(); x != nil {
 			p := oC_Properties(x.(*parser.OC_PropertiesContext))
-			ret.Properties = &p
+			ret.properties = &p
 		}
 	}
 	return ret
@@ -946,15 +946,15 @@ func oC_Variable(ctx *parser.OC_VariableContext) Variable {
 	return Variable(oC_SymbolicName(ctx.OC_SymbolicName().(*parser.OC_SymbolicNameContext)))
 }
 
-func oC_RelationshipTypes(ctx *parser.OC_RelationshipTypesContext) RelationshipTypes {
-	ret := RelationshipTypes{}
+func oC_RelationshipTypes(ctx *parser.OC_RelationshipTypesContext) relationshipTypes {
+	ret := relationshipTypes{}
 	for _, x := range ctx.AllOC_RelTypeName() {
-		ret.Rel = append(ret.Rel, oC_RelTypeName(x.(*parser.OC_RelTypeNameContext)))
+		ret.rel = append(ret.rel, oC_RelTypeName(x.(*parser.OC_RelTypeNameContext)))
 	}
 	return ret
 }
 
-func oC_RelTypeName(ctx *parser.OC_RelTypeNameContext) SchemaName {
+func oC_RelTypeName(ctx *parser.OC_RelTypeNameContext) schemaName {
 	return oC_SchemaName(ctx.OC_SchemaName().(*parser.OC_SchemaNameContext))
 }
 
@@ -980,17 +980,17 @@ func oC_Parameter(ctx *parser.OC_ParameterContext) Parameter {
 	return ret
 }
 
-func DecimalInteger(ctx antlr.TerminalNode) IntLiteral {
+func DecimalInteger(ctx antlr.TerminalNode) intLiteral {
 	i, err := strconv.Atoi(ctx.GetText())
 	if err != nil {
 		panic(err)
 	}
-	return IntLiteral(i)
+	return intLiteral(i)
 }
 
-func oC_RangeLiteral(ctx *parser.OC_RangeLiteralContext) RangeLiteral {
-	ret := RangeLiteral{}
-	values := make([]IntLiteral, 0, 2)
+func oC_RangeLiteral(ctx *parser.OC_RangeLiteralContext) rangeLiteral {
+	ret := rangeLiteral{}
+	values := make([]intLiteral, 0, 2)
 	rangeIndex := -1
 	for i := 0; i < ctx.GetChildCount(); i++ {
 		ch := ctx.GetChild(i)
@@ -1005,30 +1005,30 @@ func oC_RangeLiteral(ctx *parser.OC_RangeLiteralContext) RangeLiteral {
 
 	switch len(values) {
 	case 2:
-		ret.From = &values[0]
-		ret.To = &values[1]
+		ret.from = &values[0]
+		ret.to = &values[1]
 	case 1:
 		switch rangeIndex {
 		case 0: // ..value
-			ret.To = &values[0]
+			ret.to = &values[0]
 		case 1: // value..
-			ret.From = &values[0]
+			ret.from = &values[0]
 		case -1: // value
-			ret.From = &values[0]
-			ret.To = &values[0]
+			ret.from = &values[0]
+			ret.to = &values[0]
 		}
 	}
 	return ret
 }
 
-func oC_IntegerLiteral(ctx *parser.OC_IntegerLiteralContext) IntLiteral {
+func oC_IntegerLiteral(ctx *parser.OC_IntegerLiteralContext) intLiteral {
 	if x := ctx.HexInteger(); x != nil {
 		t := x.GetText()
 		val, err := strconv.ParseInt(string(t[2:]), 16, 64)
 		if err != nil {
 			panic(err)
 		}
-		return IntLiteral(val)
+		return intLiteral(val)
 	}
 	if x := ctx.OctalInteger(); x != nil {
 		t := x.GetText()
@@ -1036,39 +1036,39 @@ func oC_IntegerLiteral(ctx *parser.OC_IntegerLiteralContext) IntLiteral {
 		if err != nil {
 			panic(err)
 		}
-		return IntLiteral(val)
+		return intLiteral(val)
 	}
 	return DecimalInteger(ctx.DecimalInteger())
 }
 
-func oC_BooleanLiteral(ctx *parser.OC_BooleanLiteralContext) BooleanLiteral {
+func oC_BooleanLiteral(ctx *parser.OC_BooleanLiteralContext) booleanLiteral {
 	if ctx.TRUE() != nil {
-		return BooleanLiteral(true)
+		return booleanLiteral(true)
 	}
-	return BooleanLiteral(false)
+	return booleanLiteral(false)
 }
 
-func oC_ListLiteral(ctx *parser.OC_ListLiteralContext) *ListLiteral {
-	ret := &ListLiteral{}
+func oC_ListLiteral(ctx *parser.OC_ListLiteralContext) *listLiteral {
+	ret := &listLiteral{}
 	for _, x := range ctx.AllOC_Expression() {
-		ret.Values = append(ret.Values, oC_Expression(x.(*parser.OC_ExpressionContext)))
+		ret.values = append(ret.values, oC_Expression(x.(*parser.OC_ExpressionContext)))
 	}
 	return ret
 }
 
-func oC_MapLiteral(ctx *parser.OC_MapLiteralContext) *MapLiteral {
-	ret := &MapLiteral{}
-	var keyName SchemaName
+func oC_MapLiteral(ctx *parser.OC_MapLiteralContext) *mapLiteral {
+	ret := &mapLiteral{}
+	var keyName schemaName
 	for i := 0; i < ctx.GetChildCount(); i++ {
 		switch c := ctx.GetChild(i).(type) {
 		case *parser.OC_PropertyKeyNameContext:
 			keyName = oC_SchemaName(c.OC_SchemaName().(*parser.OC_SchemaNameContext))
 		case *parser.OC_ExpressionContext:
-			value := MapKeyValue{
-				Key:   keyName.String(),
-				Value: oC_Expression(c),
+			value := mapKeyValue{
+				key:   keyName.String(),
+				value: oC_Expression(c),
 			}
-			ret.KeyValues = append(ret.KeyValues, value)
+			ret.keyValues = append(ret.keyValues, value)
 		}
 	}
 	return ret
@@ -1085,7 +1085,7 @@ func oC_Atom(ctx *parser.OC_AtomContext) Atom {
 		return oC_CaseExpression(casee.(*parser.OC_CaseExpressionContext))
 	}
 	if ctx.COUNT() != nil {
-		return CountAtom{}
+		return countAtom{}
 	}
 
 	if l := ctx.OC_ListComprehension(); l != nil {
@@ -1095,27 +1095,27 @@ func oC_Atom(ctx *parser.OC_AtomContext) Atom {
 		return oC_PatternComprehension(p.(*parser.OC_PatternComprehensionContext))
 	}
 	if ctx.ALL() != nil {
-		return FilterAtom{
-			Op:     "ALL",
-			Filter: oC_FilterExpression(ctx.OC_FilterExpression().(*parser.OC_FilterExpressionContext)),
+		return filterAtom{
+			op:     "ALL",
+			filter: oC_FilterExpression(ctx.OC_FilterExpression().(*parser.OC_FilterExpressionContext)),
 		}
 	}
 	if ctx.ANY() != nil {
-		return FilterAtom{
-			Op:     "ANY",
-			Filter: oC_FilterExpression(ctx.OC_FilterExpression().(*parser.OC_FilterExpressionContext)),
+		return filterAtom{
+			op:     "ANY",
+			filter: oC_FilterExpression(ctx.OC_FilterExpression().(*parser.OC_FilterExpressionContext)),
 		}
 	}
 	if ctx.NONE() != nil {
-		return FilterAtom{
-			Op:     "NONE",
-			Filter: oC_FilterExpression(ctx.OC_FilterExpression().(*parser.OC_FilterExpressionContext)),
+		return filterAtom{
+			op:     "NONE",
+			filter: oC_FilterExpression(ctx.OC_FilterExpression().(*parser.OC_FilterExpressionContext)),
 		}
 	}
 	if ctx.SINGLE() != nil {
-		return FilterAtom{
-			Op:     "SINGLE",
-			Filter: oC_FilterExpression(ctx.OC_FilterExpression().(*parser.OC_FilterExpressionContext)),
+		return filterAtom{
+			op:     "SINGLE",
+			filter: oC_FilterExpression(ctx.OC_FilterExpression().(*parser.OC_FilterExpressionContext)),
 		}
 	}
 	if r := ctx.OC_RelationshipsPattern(); r != nil {
@@ -1130,14 +1130,14 @@ func oC_Atom(ctx *parser.OC_AtomContext) Atom {
 	return oC_Variable(ctx.OC_Variable().(*parser.OC_VariableContext))
 }
 
-func oC_FilterExpression(ctx *parser.OC_FilterExpressionContext) FilterExpression {
+func oC_FilterExpression(ctx *parser.OC_FilterExpressionContext) filterExpression {
 	idInColl := ctx.OC_IdInColl().(*parser.OC_IdInCollContext)
-	ret := FilterExpression{
-		Variable: oC_Variable(idInColl.OC_Variable().(*parser.OC_VariableContext)),
-		InExpr:   oC_Expression(idInColl.OC_Expression().(*parser.OC_ExpressionContext)),
+	ret := filterExpression{
+		variable: oC_Variable(idInColl.OC_Variable().(*parser.OC_VariableContext)),
+		inExpr:   oC_Expression(idInColl.OC_Expression().(*parser.OC_ExpressionContext)),
 	}
 	if w := ctx.OC_Where(); w != nil {
-		ret.Where = oC_Where(w.(*parser.OC_WhereContext))
+		ret.where = oC_Where(w.(*parser.OC_WhereContext))
 	}
 
 	return ret
@@ -1145,75 +1145,75 @@ func oC_FilterExpression(ctx *parser.OC_FilterExpressionContext) FilterExpressio
 
 //oC_RelationshipsPattern   :  oC_NodePattern ( SP? oC_PatternElementChain )+ ;
 // oC_PatternElementChain :  oC_RelationshipPattern SP? oC_NodePattern ;
-func oC_RelationshipsPattern(ctx *parser.OC_RelationshipsPatternContext) RelationshipsPattern {
-	ret := RelationshipsPattern{
-		Start: oC_NodePattern(ctx.OC_NodePattern().(*parser.OC_NodePatternContext)),
+func oC_RelationshipsPattern(ctx *parser.OC_RelationshipsPatternContext) relationshipsPattern {
+	ret := relationshipsPattern{
+		start: oC_NodePattern(ctx.OC_NodePattern().(*parser.OC_NodePatternContext)),
 	}
 	for _, element := range ctx.AllOC_PatternElementChain() {
-		ret.Chain = append(ret.Chain, oC_PatternElementChain(element.(*parser.OC_PatternElementChainContext)))
+		ret.chain = append(ret.chain, oC_PatternElementChain(element.(*parser.OC_PatternElementChainContext)))
 	}
 	return ret
 }
 
-func oC_ListComprehension(ctx *parser.OC_ListComprehensionContext) ListComprehension {
-	ret := ListComprehension{
-		Filter: oC_FilterExpression(ctx.OC_FilterExpression().(*parser.OC_FilterExpressionContext)),
+func oC_ListComprehension(ctx *parser.OC_ListComprehensionContext) listComprehension {
+	ret := listComprehension{
+		filter: oC_FilterExpression(ctx.OC_FilterExpression().(*parser.OC_FilterExpressionContext)),
 	}
 	if x := ctx.OC_Expression(); x != nil {
-		ret.Expr = oC_Expression(x.(*parser.OC_ExpressionContext))
+		ret.expr = oC_Expression(x.(*parser.OC_ExpressionContext))
 	}
 	return ret
 }
 
-func oC_FunctionInvocation(ctx *parser.OC_FunctionInvocationContext) *FunctionInvocation {
-	ret := &FunctionInvocation{
-		Name:     oC_FunctionName(ctx.OC_FunctionName().(*parser.OC_FunctionNameContext)),
-		Distinct: ctx.DISTINCT() != nil,
+func oC_FunctionInvocation(ctx *parser.OC_FunctionInvocationContext) *functionInvocation {
+	ret := &functionInvocation{
+		name:     oC_FunctionName(ctx.OC_FunctionName().(*parser.OC_FunctionNameContext)),
+		distinct: ctx.DISTINCT() != nil,
 	}
 	for _, x := range ctx.AllOC_Expression() {
-		ret.Args = append(ret.Args, oC_Expression(x.(*parser.OC_ExpressionContext)))
+		ret.args = append(ret.args, oC_Expression(x.(*parser.OC_ExpressionContext)))
 	}
 	return ret
 }
 
-func oC_FunctionName(ctx *parser.OC_FunctionNameContext) []SymbolicName {
+func oC_FunctionName(ctx *parser.OC_FunctionNameContext) []symbolicName {
 	if ctx.EXISTS() != nil {
-		return []SymbolicName{"EXISTS"}
+		return []symbolicName{"EXISTS"}
 	}
 	ns := oC_Namespace(ctx.OC_Namespace().(*parser.OC_NamespaceContext))
 	return append(ns, oC_SymbolicName(ctx.OC_SymbolicName().(*parser.OC_SymbolicNameContext)))
 }
 
-func oC_Namespace(ctx *parser.OC_NamespaceContext) []SymbolicName {
-	ret := make([]SymbolicName, 0)
+func oC_Namespace(ctx *parser.OC_NamespaceContext) []symbolicName {
+	ret := make([]symbolicName, 0)
 	for _, x := range ctx.AllOC_SymbolicName() {
 		ret = append(ret, oC_SymbolicName(x.(*parser.OC_SymbolicNameContext)))
 	}
 	return ret
 }
 
-func oC_PatternComprehension(ctx *parser.OC_PatternComprehensionContext) PatternComprehension {
-	ret := PatternComprehension{
-		Rel: oC_RelationshipsPattern(ctx.OC_RelationshipsPattern().(*parser.OC_RelationshipsPatternContext)),
+func oC_PatternComprehension(ctx *parser.OC_PatternComprehensionContext) patternComprehension {
+	ret := patternComprehension{
+		rel: oC_RelationshipsPattern(ctx.OC_RelationshipsPattern().(*parser.OC_RelationshipsPatternContext)),
 	}
 	if v := ctx.OC_Variable(); v != nil {
 		x := oC_Variable(v.(*parser.OC_VariableContext))
-		ret.Var = &x
+		ret.variable = &x
 	}
 	expr := ctx.AllOC_Expression()
 	if len(expr) == 1 {
-		ret.Expr = oC_Expression(expr[0].(*parser.OC_ExpressionContext))
+		ret.expr = oC_Expression(expr[0].(*parser.OC_ExpressionContext))
 	} else {
-		ret.Where = oC_Expression(expr[0].(*parser.OC_ExpressionContext))
-		ret.Expr = oC_Expression(expr[1].(*parser.OC_ExpressionContext))
+		ret.where = oC_Expression(expr[0].(*parser.OC_ExpressionContext))
+		ret.expr = oC_Expression(expr[1].(*parser.OC_ExpressionContext))
 	}
 	return ret
 }
 
-func oC_CaseExpression(ctx *parser.OC_CaseExpressionContext) Case {
-	ret := Case{}
+func oC_CaseExpression(ctx *parser.OC_CaseExpressionContext) caseClause {
+	ret := caseClause{}
 	for _, alt := range ctx.AllOC_CaseAlternatives() {
-		ret.Alternatives = append(ret.Alternatives, oC_CaseAlternatives(alt.(*parser.OC_CaseAlternativesContext)))
+		ret.alternatives = append(ret.alternatives, oC_CaseAlternatives(alt.(*parser.OC_CaseAlternativesContext)))
 	}
 	elseSeen := false
 	for i := 0; i < ctx.GetChildCount(); i++ {
@@ -1224,33 +1224,33 @@ func oC_CaseExpression(ctx *parser.OC_CaseExpressionContext) Case {
 			}
 		} else if expr, ok := ch.(*parser.OC_ExpressionContext); ok {
 			if elseSeen {
-				ret.Default = oC_Expression(expr)
+				ret.def = oC_Expression(expr)
 			} else {
-				ret.Test = oC_Expression(expr)
+				ret.test = oC_Expression(expr)
 			}
 		}
 	}
 	return ret
 }
 
-func oC_CaseAlternatives(ctx *parser.OC_CaseAlternativesContext) CaseAlternative {
+func oC_CaseAlternatives(ctx *parser.OC_CaseAlternativesContext) caseAlternative {
 	expr := ctx.AllOC_Expression()
-	return CaseAlternative{
-		When: oC_Expression(expr[0].(*parser.OC_ExpressionContext)),
-		Then: oC_Expression(expr[1].(*parser.OC_ExpressionContext)),
+	return caseAlternative{
+		when: oC_Expression(expr[0].(*parser.OC_ExpressionContext)),
+		then: oC_Expression(expr[1].(*parser.OC_ExpressionContext)),
 	}
 }
 
 func oC_Literal(ctx *parser.OC_LiteralContext) Evaluatable {
 	if ctx.NULL() != nil {
-		return NullLiteral{}
+		return nullLiteral{}
 	}
 	if n := ctx.OC_NumberLiteral(); n != nil {
 		return oC_NumberLiteral(n.(*parser.OC_NumberLiteralContext))
 	}
 	if s := ctx.StringLiteral(); s != nil {
 		text := s.GetText()
-		return StringLiteral(text[1 : len(text)-1])
+		return stringLiteral(text[1 : len(text)-1])
 	}
 	if b := ctx.OC_BooleanLiteral(); b != nil {
 		return oC_BooleanLiteral(b.(*parser.OC_BooleanLiteralContext))
@@ -1268,25 +1268,25 @@ func oC_NumberLiteral(ctx *parser.OC_NumberLiteralContext) Evaluatable {
 	return oC_IntegerLiteral(ctx.OC_IntegerLiteral().(*parser.OC_IntegerLiteralContext))
 }
 
-func oC_DoubleLiteral(ctx *parser.OC_DoubleLiteralContext) DoubleLiteral {
+func oC_DoubleLiteral(ctx *parser.OC_DoubleLiteralContext) doubleLiteral {
 	v, err := strconv.ParseFloat(ctx.GetText(), 64)
 	if err != nil {
 		panic(err)
 	}
-	return DoubleLiteral(v)
+	return doubleLiteral(v)
 }
 
 func oC_Unwind(ctx *parser.OC_UnwindContext) unwind {
 	return unwind{
-		Expr: oC_Expression(ctx.OC_Expression().(*parser.OC_ExpressionContext)),
-		As:   oC_Variable(ctx.OC_Variable().(*parser.OC_VariableContext)),
+		expr: oC_Expression(ctx.OC_Expression().(*parser.OC_ExpressionContext)),
+		as:   oC_Variable(ctx.OC_Variable().(*parser.OC_VariableContext)),
 	}
 }
 
 func oC_Set(ctx *parser.OC_SetContext) UpdatingClause {
 	ret := &set{}
 	for _, item := range ctx.AllOC_SetItem() {
-		ret.Items = append(ret.Items, oC_SetItem(item.(*parser.OC_SetItemContext)))
+		ret.items = append(ret.items, oC_SetItem(item.(*parser.OC_SetItemContext)))
 	}
 	return ret
 }
@@ -1295,22 +1295,22 @@ func oC_SetItem(ctx *parser.OC_SetItemContext) setItem {
 	if p := ctx.OC_PropertyExpression(); p != nil {
 		pe := oC_PropertyExpression(p.(*parser.OC_PropertyExpressionContext))
 		return setItem{
-			Property:   &pe,
-			Expression: oC_Expression(ctx.OC_Expression().(*parser.OC_ExpressionContext)),
+			property:   &pe,
+			expression: oC_Expression(ctx.OC_Expression().(*parser.OC_ExpressionContext)),
 		}
 	}
 	v := oC_Variable(ctx.OC_Variable().(*parser.OC_VariableContext))
 	if expr := ctx.OC_Expression(); expr != nil {
 		ret := setItem{
-			Variable:   &v,
-			Expression: oC_Expression(expr.(*parser.OC_ExpressionContext)),
+			variable:   &v,
+			expression: oC_Expression(expr.(*parser.OC_ExpressionContext)),
 		}
 		for i := 0; i < ctx.GetChildCount(); i++ {
 			ch := ctx.GetChild(i)
 			if term, ok := ch.(antlr.TerminalNode); ok {
 				text := term.GetText()
 				if text == "=" || text == "+=" {
-					ret.Op = text
+					ret.op = text
 					break
 				}
 			}
@@ -1318,28 +1318,28 @@ func oC_SetItem(ctx *parser.OC_SetItemContext) setItem {
 		return ret
 	}
 	ret := setItem{
-		Variable:   &v,
-		NodeLabels: oC_NodeLabels(ctx.OC_NodeLabels().(*parser.OC_NodeLabelsContext)),
+		variable:   &v,
+		nodeLabels: oC_NodeLabels(ctx.OC_NodeLabels().(*parser.OC_NodeLabelsContext)),
 	}
 	return ret
 }
 
 func oC_PropertyExpression(ctx *parser.OC_PropertyExpressionContext) propertyExpression {
 	ret := propertyExpression{
-		Atom: oC_Atom(ctx.OC_Atom().(*parser.OC_AtomContext)),
+		atom: oC_Atom(ctx.OC_Atom().(*parser.OC_AtomContext)),
 	}
 	for _, l := range ctx.AllOC_PropertyLookup() {
-		ret.Lookup = append(ret.Lookup, oC_PropertyLookup(l.(*parser.OC_PropertyLookupContext)))
+		ret.lookup = append(ret.lookup, oC_PropertyLookup(l.(*parser.OC_PropertyLookupContext)))
 	}
 	return ret
 }
 
 func oC_Delete(ctx *parser.OC_DeleteContext) UpdatingClause {
 	ret := deleteClause{
-		Detach: ctx.DETACH() != nil,
+		detach: ctx.DETACH() != nil,
 	}
 	for _, e := range ctx.AllOC_Expression() {
-		ret.Exprs = append(ret.Exprs, oC_Expression(e.(*parser.OC_ExpressionContext)))
+		ret.exprs = append(ret.exprs, oC_Expression(e.(*parser.OC_ExpressionContext)))
 	}
 	return ret
 }
@@ -1347,7 +1347,7 @@ func oC_Delete(ctx *parser.OC_DeleteContext) UpdatingClause {
 func oC_Remove(ctx *parser.OC_RemoveContext) UpdatingClause {
 	ret := remove{}
 	for _, item := range ctx.AllOC_RemoveItem() {
-		ret.Items = append(ret.Items, oC_RemoveItem(item.(*parser.OC_RemoveItemContext)))
+		ret.items = append(ret.items, oC_RemoveItem(item.(*parser.OC_RemoveItemContext)))
 	}
 	return ret
 }
@@ -1356,21 +1356,21 @@ func oC_RemoveItem(ctx *parser.OC_RemoveItemContext) removeItem {
 	ret := removeItem{}
 	if v := ctx.OC_Variable(); v != nil {
 		variable := oC_Variable(v.(*parser.OC_VariableContext))
-		ret.Variable = &variable
+		ret.variable = &variable
 	}
 	if v := ctx.OC_NodeLabels(); v != nil {
-		ret.NodeLabels = oC_NodeLabels(v.(*parser.OC_NodeLabelsContext))
+		ret.nodeLabels = oC_NodeLabels(v.(*parser.OC_NodeLabelsContext))
 	}
 	if v := ctx.OC_PropertyExpression(); v != nil {
 		expr := oC_PropertyExpression(v.(*parser.OC_PropertyExpressionContext))
-		ret.Property = &expr
+		ret.property = &expr
 	}
 	return ret
 }
 
 func oC_Create(ctx *parser.OC_CreateContext) UpdatingClause {
 	ret := create{
-		Pattern: oC_Pattern(ctx.OC_Pattern().(*parser.OC_PatternContext)),
+		pattern: oC_Pattern(ctx.OC_Pattern().(*parser.OC_PatternContext)),
 	}
 	return ret
 }

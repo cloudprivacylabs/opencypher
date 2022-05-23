@@ -76,7 +76,7 @@ func (ctx *EvalContext) getFunction(name string) (Function, error) {
 	return f, nil
 }
 
-func (ctx *EvalContext) GetFunction(name []SymbolicName) (Function, error) {
+func (ctx *EvalContext) GetFunction(name []string) (Function, error) {
 	bld := strings.Builder{}
 	for i, x := range name {
 		if i > 0 {

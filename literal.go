@@ -4,48 +4,48 @@ import (
 	"strings"
 )
 
-func (literal IntLiteral) Evaluate(ctx *EvalContext) (Value, error) {
+func (literal intLiteral) Evaluate(ctx *EvalContext) (Value, error) {
 	return RValue{
 		Value: int(literal),
 		Const: true,
 	}, nil
 }
 
-func (literal BooleanLiteral) Evaluate(ctx *EvalContext) (Value, error) {
+func (literal booleanLiteral) Evaluate(ctx *EvalContext) (Value, error) {
 	return RValue{
 		Value: bool(literal),
 		Const: true,
 	}, nil
 }
 
-func (literal DoubleLiteral) Evaluate(ctx *EvalContext) (Value, error) {
+func (literal doubleLiteral) Evaluate(ctx *EvalContext) (Value, error) {
 	return RValue{
 		Value: float64(literal),
 		Const: true,
 	}, nil
 }
 
-func (literal StringLiteral) Evaluate(ctx *EvalContext) (Value, error) {
+func (literal stringLiteral) Evaluate(ctx *EvalContext) (Value, error) {
 	return RValue{
 		Value: string(literal),
 		Const: true,
 	}, nil
 }
 
-func (literal NullLiteral) Evaluate(ctx *EvalContext) (Value, error) {
+func (literal nullLiteral) Evaluate(ctx *EvalContext) (Value, error) {
 	return RValue{
 		Const: true,
 	}, nil
 }
 
-func (lst *ListLiteral) Evaluate(ctx *EvalContext) (Value, error) {
+func (lst *listLiteral) Evaluate(ctx *EvalContext) (Value, error) {
 	if lst.constValue != nil {
 		return lst.constValue, nil
 	}
-	ret := make([]Value, 0, len(lst.Values))
+	ret := make([]Value, 0, len(lst.values))
 	var val RValue
-	for i := range lst.Values {
-		v, err := lst.Values[i].Evaluate(ctx)
+	for i := range lst.values {
+		v, err := lst.values[i].Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -63,18 +63,18 @@ func (lst *ListLiteral) Evaluate(ctx *EvalContext) (Value, error) {
 	return val, nil
 }
 
-func (mp *MapLiteral) Evaluate(ctx *EvalContext) (Value, error) {
+func (mp *mapLiteral) Evaluate(ctx *EvalContext) (Value, error) {
 	if mp.constValue != nil {
 		return mp.constValue, nil
 	}
 	var val RValue
 	ret := make(map[string]Value)
-	for i := range mp.KeyValues {
-		keyStr := mp.KeyValues[i].Key
+	for i := range mp.keyValues {
+		keyStr := mp.keyValues[i].key
 		if len(keyStr) == 0 {
 			return nil, ErrInvalidMapKey
 		}
-		value, err := mp.KeyValues[i].Value.Evaluate(ctx)
+		value, err := mp.keyValues[i].value.Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -92,18 +92,18 @@ func (mp *MapLiteral) Evaluate(ctx *EvalContext) (Value, error) {
 	return val, nil
 }
 
-func (r *RangeLiteral) Evaluate(ctx *EvalContext) (from, to *int, err error) {
+func (r *rangeLiteral) Evaluate(ctx *EvalContext) (from, to *int, err error) {
 	var v Value
-	if r.From != nil {
-		v, err = r.From.Evaluate(ctx)
+	if r.from != nil {
+		v, err = r.from.Evaluate(ctx)
 		if err != nil {
 			return
 		}
 		i := v.Get().(int)
 		from = &i
 	}
-	if r.To != nil {
-		v, err = r.To.Evaluate(ctx)
+	if r.to != nil {
+		v, err = r.to.Evaluate(ctx)
 		if err != nil {
 			return
 		}

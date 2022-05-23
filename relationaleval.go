@@ -123,7 +123,7 @@ func comparePrimitiveValues(v1, v2 interface{}) (int, error) {
 }
 
 func (expr comparisonExpression) Evaluate(ctx *EvalContext) (Value, error) {
-	val, err := expr.First.Evaluate(ctx)
+	val, err := expr.first.Evaluate(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -132,8 +132,8 @@ func (expr comparisonExpression) Evaluate(ctx *EvalContext) (Value, error) {
 		return RValue{}, nil
 	}
 	ret := RValue{Value: val.Get(), Const: val.IsConst()}
-	for i := range expr.Second {
-		second, err := expr.Second[i].Expr.Evaluate(ctx)
+	for i := range expr.second {
+		second, err := expr.second[i].expr.Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +144,7 @@ func (expr comparisonExpression) Evaluate(ctx *EvalContext) (Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		switch expr.Second[i].Op {
+		switch expr.second[i].op {
 		case "=":
 			ret.Value = result == 0
 		case "<>":
@@ -164,7 +164,7 @@ func (expr comparisonExpression) Evaluate(ctx *EvalContext) (Value, error) {
 }
 
 func (expr notExpression) Evaluate(ctx *EvalContext) (Value, error) {
-	val, err := expr.Part.Evaluate(ctx)
+	val, err := expr.part.Evaluate(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -180,8 +180,8 @@ func (expr notExpression) Evaluate(ctx *EvalContext) (Value, error) {
 
 func (expr andExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	var ret RValue
-	for i := range expr.Parts {
-		val, err := expr.Parts[i].Evaluate(ctx)
+	for i := range expr.parts {
+		val, err := expr.parts[i].Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -211,8 +211,8 @@ func (expr andExpression) Evaluate(ctx *EvalContext) (Value, error) {
 
 func (expr xorExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	var ret RValue
-	for i := range expr.Parts {
-		val, err := expr.Parts[i].Evaluate(ctx)
+	for i := range expr.parts {
+		val, err := expr.parts[i].Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -239,8 +239,8 @@ func (expr xorExpression) Evaluate(ctx *EvalContext) (Value, error) {
 
 func (expr orExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	var ret RValue
-	for i := range expr.Parts {
-		val, err := expr.Parts[i].Evaluate(ctx)
+	for i := range expr.parts {
+		val, err := expr.parts[i].Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}

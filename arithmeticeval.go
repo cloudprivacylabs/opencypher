@@ -7,17 +7,17 @@ import (
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 )
 
-func (expr *UnaryAddOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
+func (expr *unaryAddOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	if expr.constValue != nil {
 		return expr.constValue, nil
 	}
 
-	value, err := expr.Expr.Evaluate(ctx)
+	value, err := expr.expr.Evaluate(ctx)
 	if err != nil {
 		return nil, err
 	}
 	// If the value is  an lvalue, preserve lvalue status
-	if !expr.Neg {
+	if !expr.neg {
 		return value, nil
 	}
 	// From now on, it is an rvalue
@@ -39,15 +39,15 @@ func (expr *UnaryAddOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, err
 	return ret, nil
 }
 
-func (expr *PowerOfExpression) Evaluate(ctx *EvalContext) (Value, error) {
+func (expr *powerOfExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	if expr.constValue != nil {
 		return expr.constValue, nil
 	}
-	val, err := expr.Parts[0].Evaluate(ctx)
+	val, err := expr.parts[0].Evaluate(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if len(expr.Parts) == 1 {
+	if len(expr.parts) == 1 {
 		return val, nil
 	}
 	// ret is an rvalue
@@ -55,8 +55,8 @@ func (expr *PowerOfExpression) Evaluate(ctx *EvalContext) (Value, error) {
 		Value: val.Get(),
 		Const: val.IsConst(),
 	}
-	for i := 1; 1 < len(expr.Parts); i++ {
-		val, err := expr.Parts[i].Evaluate(ctx)
+	for i := 1; 1 < len(expr.parts); i++ {
+		val, err := expr.parts[i].Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -197,12 +197,12 @@ func mulfloatdur(a float64, b neo4j.Duration, op rune) (neo4j.Duration, error) {
 	}
 }
 
-func (expr *MultiplyDivideModuloExpression) Evaluate(ctx *EvalContext) (Value, error) {
+func (expr *multiplyDivideModuloExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	if expr.constValue != nil {
 		return expr.constValue, nil
 	}
-	if len(expr.Parts) == 1 {
-		v, err := expr.Parts[0].Expr.Evaluate(ctx)
+	if len(expr.parts) == 1 {
+		v, err := expr.parts[0].expr.Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -214,9 +214,9 @@ func (expr *MultiplyDivideModuloExpression) Evaluate(ctx *EvalContext) (Value, e
 	// Multiple parts, cannot be an lvalue
 	var ret RValue
 	var err error
-	for i := range expr.Parts {
+	for i := range expr.parts {
 		var val Value
-		val, err = expr.Parts[i].Expr.Evaluate(ctx)
+		val, err = expr.parts[i].expr.Evaluate(ctx)
 		if err != nil {
 			return val, err
 		}
@@ -232,31 +232,31 @@ func (expr *MultiplyDivideModuloExpression) Evaluate(ctx *EvalContext) (Value, e
 			case int:
 				switch operand := val.Get().(type) {
 				case int:
-					ret.Value, err = mulintint(result, operand, expr.Parts[i].Op)
+					ret.Value, err = mulintint(result, operand, expr.parts[i].op)
 				case float64:
-					ret.Value, err = mulintfloat(result, operand, expr.Parts[i].Op)
+					ret.Value, err = mulintfloat(result, operand, expr.parts[i].op)
 				case neo4j.Duration:
-					ret.Value, err = mulintdur(int64(result), operand, expr.Parts[i].Op)
+					ret.Value, err = mulintdur(int64(result), operand, expr.parts[i].op)
 				default:
 					err = ErrInvalidMultiplicativeOperation
 				}
 			case float64:
 				switch operand := val.Get().(type) {
 				case int:
-					ret.Value, err = mulfloatint(result, operand, expr.Parts[i].Op)
+					ret.Value, err = mulfloatint(result, operand, expr.parts[i].op)
 				case float64:
-					ret.Value, err = mulfloatfloat(result, operand, expr.Parts[i].Op)
+					ret.Value, err = mulfloatfloat(result, operand, expr.parts[i].op)
 				case neo4j.Duration:
-					ret.Value, err = mulfloatdur(result, operand, expr.Parts[i].Op)
+					ret.Value, err = mulfloatdur(result, operand, expr.parts[i].op)
 				default:
 					err = ErrInvalidMultiplicativeOperation
 				}
 			case neo4j.Duration:
 				switch operand := val.Get().(type) {
 				case int:
-					ret.Value, err = muldurint(result, int64(operand), expr.Parts[i].Op)
+					ret.Value, err = muldurint(result, int64(operand), expr.parts[i].op)
 				case float64:
-					ret.Value, err = muldurfloat(result, operand, expr.Parts[i].Op)
+					ret.Value, err = muldurfloat(result, operand, expr.parts[i].op)
 				default:
 					err = ErrInvalidMultiplicativeOperation
 				}
@@ -383,8 +383,8 @@ func (expr *addOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	if expr.constValue != nil {
 		return expr.constValue, nil
 	}
-	if len(expr.Add) == 1 && len(expr.Sub) == 0 {
-		ret, err := expr.Add[0].Evaluate(ctx)
+	if len(expr.add) == 1 && len(expr.sub) == 0 {
+		ret, err := expr.add[0].Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -480,8 +480,8 @@ func (expr *addOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
 		return err
 	}
 
-	for i := range expr.Add {
-		val, err := expr.Add[i].Evaluate(ctx)
+	for i := range expr.add {
+		val, err := expr.add[i].Evaluate(ctx)
 		if err != nil {
 			return RValue{}, err
 		}
@@ -489,8 +489,8 @@ func (expr *addOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
 			return RValue{}, err
 		}
 	}
-	for i := range expr.Sub {
-		val, err := expr.Add[i].Evaluate(ctx)
+	for i := range expr.sub {
+		val, err := expr.sub[i].Evaluate(ctx)
 		if err != nil {
 			return RValue{}, err
 		}

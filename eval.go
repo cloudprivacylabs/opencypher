@@ -50,12 +50,12 @@ type ErrInvalidAssignment string
 
 func (e ErrInvalidAssignment) Error() string { return "Invalid assignment to: " + string(e) }
 
-func (expr StringListNullOperatorExpression) Evaluate(ctx *EvalContext) (Value, error) {
-	val, err := expr.PropertyOrLabels.Evaluate(ctx)
+func (expr stringListNullOperatorExpression) Evaluate(ctx *EvalContext) (Value, error) {
+	val, err := expr.propertyOrLabels.Evaluate(ctx)
 	if err != nil {
 		return nil, err
 	}
-	for _, part := range expr.Parts {
+	for _, part := range expr.parts {
 		val, err = part.evaluate(ctx, val)
 		if err != nil {
 			return nil, err
@@ -64,22 +64,22 @@ func (expr StringListNullOperatorExpression) Evaluate(ctx *EvalContext) (Value, 
 	return val, nil
 }
 
-func (expr StringListNullOperatorExpressionPart) evaluate(ctx *EvalContext, inputValue Value) (Value, error) {
+func (expr stringListNullOperatorExpressionPart) evaluate(ctx *EvalContext, inputValue Value) (Value, error) {
 	switch {
-	case expr.IsNull != nil:
-		if *expr.IsNull {
+	case expr.isNull != nil:
+		if *expr.isNull {
 			return RValue{Value: inputValue.Get() == nil}, nil
 		}
 		return RValue{Value: inputValue.Get() != nil}, nil
 
-	case expr.ListIndex != nil:
+	case expr.listIndex != nil:
 		listValue, ok := inputValue.Get().([]Value)
 		if !ok {
 			if inputValue.Get() != nil {
 				return nil, ErrNotAList
 			}
 		}
-		indexValue, err := expr.ListIndex.Evaluate(ctx)
+		indexValue, err := expr.listIndex.Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -105,8 +105,8 @@ func (expr StringListNullOperatorExpressionPart) evaluate(ctx *EvalContext, inpu
 		}
 		return listValue[index], nil
 
-	case expr.ListIn != nil:
-		listValue, err := expr.ListIn.Evaluate(ctx)
+	case expr.listIn != nil:
+		listValue, err := expr.listIn.Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -138,7 +138,7 @@ func (expr StringListNullOperatorExpressionPart) evaluate(ctx *EvalContext, inpu
 		}
 		return RValue{Value: false}, nil
 
-	case expr.ListRange != nil:
+	case expr.listRange != nil:
 		constant := inputValue.IsConst()
 		listValue, ok := inputValue.Get().([]Value)
 		if !ok {
@@ -146,7 +146,7 @@ func (expr StringListNullOperatorExpressionPart) evaluate(ctx *EvalContext, inpu
 				return nil, ErrNotAList
 			}
 		}
-		from, err := expr.ListRange.First.Evaluate(ctx)
+		from, err := expr.listRange.first.Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -160,7 +160,7 @@ func (expr StringListNullOperatorExpressionPart) evaluate(ctx *EvalContext, inpu
 		if !ok {
 			return nil, ErrInvalidListIndex
 		}
-		to, err := expr.ListRange.Second.Evaluate(ctx)
+		to, err := expr.listRange.second.Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -195,15 +195,15 @@ func (expr StringListNullOperatorExpressionPart) evaluate(ctx *EvalContext, inpu
 		}
 		return RValue{Value: arr, Const: constant}, nil
 	}
-	return expr.String.evaluate(ctx, inputValue)
+	return expr.stringOp.evaluate(ctx, inputValue)
 }
 
-func (expr StringOperatorExpression) evaluate(ctx *EvalContext, inputValue Value) (Value, error) {
+func (expr stringOperatorExpression) evaluate(ctx *EvalContext, inputValue Value) (Value, error) {
 	inputStrValue, ok := inputValue.Get().(string)
 	if !ok {
 		return nil, ErrInvalidStringOperation
 	}
-	exprValue, err := expr.Expr.Evaluate(ctx)
+	exprValue, err := expr.expr.Evaluate(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -211,27 +211,27 @@ func (expr StringOperatorExpression) evaluate(ctx *EvalContext, inputValue Value
 	if !ok {
 		return nil, ErrInvalidStringOperation
 	}
-	if expr.Operator == "STARTS" {
+	if expr.operator == "STARTS" {
 		return RValue{Value: strings.HasPrefix(inputStrValue, strValue)}, nil
 	}
-	if expr.Operator == "ENDS" {
+	if expr.operator == "ENDS" {
 		return RValue{Value: strings.HasSuffix(inputStrValue, strValue)}, nil
 	}
 	return RValue{Value: strings.Contains(inputStrValue, strValue)}, nil
 }
 
-func (pl PropertyOrLabelsExpression) Evaluate(ctx *EvalContext) (Value, error) {
-	v, err := pl.Atom.Evaluate(ctx)
+func (pl propertyOrLabelsExpression) Evaluate(ctx *EvalContext) (Value, error) {
+	v, err := pl.atom.Evaluate(ctx)
 	if err != nil {
 		return nil, err
 	}
 	val := RValue{Value: v.Get()}
-	if pl.NodeLabels != nil {
+	if pl.nodeLabels != nil {
 		gobj, ok := val.Value.(graph.StringSet)
 		if !ok {
 			return nil, ErrNotAStringSet
 		}
-		for _, label := range *pl.NodeLabels {
+		for _, label := range *pl.nodeLabels {
 			str := label.String()
 			gobj.Add(str)
 		}
@@ -243,7 +243,7 @@ func (pl PropertyOrLabelsExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	type withNativeValue interface {
 		GetNativeValue() interface{}
 	}
-	for _, property := range pl.PropertyLookup {
+	for _, property := range pl.propertyLookup {
 		if val.Value == nil {
 			return RValue{}, nil
 		}
@@ -273,21 +273,25 @@ func (pl PropertyOrLabelsExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	return val, nil
 }
 
-func (f *FunctionInvocation) Evaluate(ctx *EvalContext) (Value, error) {
+func (f *functionInvocation) Evaluate(ctx *EvalContext) (Value, error) {
 	if f.function == nil {
-		fn, err := ctx.GetFunction(f.Name)
+		fname := make([]string, 0, len(f.name))
+		for _, x := range f.name {
+			fname = append(fname, string(x))
+		}
+		fn, err := ctx.GetFunction(fname)
 		if err != nil {
 			return nil, err
 		}
 		f.function = fn
 	}
-	args := f.args
+	args := f.parsedArgs
 	if args == nil {
-		args = make([]Evaluatable, 0, len(f.Args))
+		args = make([]Evaluatable, 0, len(f.args))
 		isConst := false
 
-		for a := range f.Args {
-			v, err := f.Args[a].Evaluate(ctx)
+		for a := range f.args {
+			v, err := f.args[a].Evaluate(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -299,33 +303,33 @@ func (f *FunctionInvocation) Evaluate(ctx *EvalContext) (Value, error) {
 			args = append(args, v)
 		}
 		if isConst {
-			f.args = args
+			f.parsedArgs = args
 		}
 	}
 	return f.function(ctx, args)
 }
 
-func (cs Case) Evaluate(ctx *EvalContext) (Value, error) {
+func (cs caseClause) Evaluate(ctx *EvalContext) (Value, error) {
 	var testValue Value
-	if cs.Test != nil {
-		v, err := cs.Test.Evaluate(ctx)
+	if cs.test != nil {
+		v, err := cs.test.Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
 		testValue = v
 	}
-	for _, alternative := range cs.Alternatives {
-		when, err := alternative.When.Evaluate(ctx)
+	for _, alternative := range cs.alternatives {
+		when, err := alternative.when.Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
-		if cs.Test != nil {
+		if cs.test != nil {
 			result, err := comparePrimitiveValues(testValue, when)
 			if err != nil {
 				return nil, err
 			}
 			if result == 0 {
-				return alternative.Then.Evaluate(ctx)
+				return alternative.then.Evaluate(ctx)
 			}
 		} else {
 			boolValue, ok := when.Get().(bool)
@@ -333,12 +337,12 @@ func (cs Case) Evaluate(ctx *EvalContext) (Value, error) {
 				return nil, ErrNotABooleanExpression
 			}
 			if boolValue {
-				return alternative.Then.Evaluate(ctx)
+				return alternative.then.Evaluate(ctx)
 			}
 		}
 	}
-	if cs.Default != nil {
-		return cs.Default.Evaluate(ctx)
+	if cs.def != nil {
+		return cs.def.Evaluate(ctx)
 	}
 	return RValue{}, nil
 }
@@ -364,7 +368,7 @@ func (query RegularQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		return nil, ErrExpectingResultSet
 	}
 	for _, u := range query.Unions {
-		newResult, err := u.SingleQuery.Evaluate(ctx)
+		newResult, err := u.singleQuery.Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -372,7 +376,7 @@ func (query RegularQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		if !ok {
 			return nil, ErrExpectingResultSet
 		}
-		if err := resultSet.Union(newResultSet, u.All); err != nil {
+		if err := resultSet.Union(newResultSet, u.all); err != nil {
 			return nil, err
 		}
 	}
@@ -383,7 +387,7 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 	ret := ResultSet{}
 	project := func(rows []map[string]Value) error {
 		for _, item := range rows {
-			val, err := query.Return.Projection.Items.Project(ctx, item)
+			val, err := query.ret.projection.items.Project(ctx, item)
 			if err != nil {
 				return err
 			}
@@ -391,9 +395,9 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		}
 		return nil
 	}
-	if len(query.Read) > 0 {
+	if len(query.read) > 0 {
 		results := ResultSet{}
-		for _, r := range query.Read {
+		for _, r := range query.read {
 			rs, err := r.GetResults(ctx)
 			if err != nil {
 				return nil, err
@@ -401,13 +405,13 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 			results.Add(rs)
 		}
 
-		for _, upd := range query.Update {
+		for _, upd := range query.update {
 			_, err := upd.Update(ctx, results)
 			if err != nil {
 				return nil, err
 			}
 		}
-		if query.Return == nil {
+		if query.ret == nil {
 			return RValue{Value: ResultSet{}}, nil
 		}
 		err := project(results.Rows)
@@ -417,15 +421,15 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		return RValue{Value: ret}, nil
 	}
 
-	for _, upd := range query.Update {
+	for _, upd := range query.update {
 		if err := upd.TopLevelUpdate(ctx); err != nil {
 			return nil, err
 		}
 	}
-	if query.Return == nil {
+	if query.ret == nil {
 		return RValue{Value: ResultSet{}}, nil
 	}
-	val, err := query.Return.Projection.Items.Project(ctx, nil)
+	val, err := query.ret.projection.items.Project(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -433,9 +437,9 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 	return RValue{Value: ret}, nil
 }
 
-func (prj ProjectionItems) Project(ctx *EvalContext, values map[string]Value) (map[string]Value, error) {
+func (prj projectionItems) Project(ctx *EvalContext, values map[string]Value) (map[string]Value, error) {
 	ret := make(map[string]Value)
-	if prj.All {
+	if prj.all {
 		for k, v := range values {
 			ret[k] = v
 		}
@@ -445,14 +449,14 @@ func (prj ProjectionItems) Project(ctx *EvalContext, values map[string]Value) (m
 	for k, v := range values {
 		ctx.SetVar(k, v)
 	}
-	for i, item := range prj.Items {
-		result, err := item.Expr.Evaluate(ctx)
+	for i, item := range prj.items {
+		result, err := item.expr.Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
 		var varName string
-		if item.Var != nil {
-			varName = string(*item.Var)
+		if item.variable != nil {
+			varName = string(*item.variable)
 		} else {
 			varName = strconv.Itoa(i + 1)
 		}
@@ -462,12 +466,12 @@ func (prj ProjectionItems) Project(ctx *EvalContext, values map[string]Value) (m
 }
 
 func (pe propertyExpression) Evaluate(ctx *EvalContext) (Value, error) {
-	val, err := pe.Atom.Evaluate(ctx)
+	val, err := pe.atom.Evaluate(ctx)
 	if err != nil {
 		return nil, err
 	}
-	for i := range pe.Lookup {
-		prop := pe.Lookup[i].String()
+	for i := range pe.lookup {
+		prop := pe.lookup[i].String()
 		// val must be a node, or map[string]Value
 		if val == nil {
 			return nil, nil
@@ -513,9 +517,9 @@ func (pe propertyExpression) Evaluate(ctx *EvalContext) (Value, error) {
 }
 
 func (unwind unwind) GetResults(ctx *EvalContext) (ResultSet, error)      { panic("Unimplemented") }
-func (ls ListComprehension) Evaluate(ctx *EvalContext) (Value, error)     { panic("Unimplemented") }
-func (p PatternComprehension) Evaluate(ctx *EvalContext) (Value, error)   { panic("Unimplemented") }
-func (flt FilterAtom) Evaluate(ctx *EvalContext) (Value, error)           { panic("Unimplemented") }
-func (rel RelationshipsPattern) Evaluate(ctx *EvalContext) (Value, error) { panic("Unimplemented") }
-func (cnt CountAtom) Evaluate(ctx *EvalContext) (Value, error)            { panic("Unimplemented") }
+func (ls listComprehension) Evaluate(ctx *EvalContext) (Value, error)     { panic("Unimplemented") }
+func (p patternComprehension) Evaluate(ctx *EvalContext) (Value, error)   { panic("Unimplemented") }
+func (flt filterAtom) Evaluate(ctx *EvalContext) (Value, error)           { panic("Unimplemented") }
+func (rel relationshipsPattern) Evaluate(ctx *EvalContext) (Value, error) { panic("Unimplemented") }
+func (cnt countAtom) Evaluate(ctx *EvalContext) (Value, error)            { panic("Unimplemented") }
 func (mq multiPartQuery) Evaluate(ctx *EvalContext) (Value, error)        { panic("Unimplemented") }

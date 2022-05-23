@@ -12,7 +12,7 @@ func (e ErrInvalidValueReferenceInPattern) Error() string {
 	return "Invalid value reference in pattern: " + e.Symbol
 }
 
-func (properties Properties) AsLiteral(ctx *EvalContext) ([]MapKeyValue, error) {
+func (properties Properties) AsLiteral(ctx *EvalContext) ([]mapKeyValue, error) {
 	if properties.Param != nil {
 		param, err := ctx.GetParameter(string(*properties.Param))
 		if err != nil {
@@ -22,14 +22,14 @@ func (properties Properties) AsLiteral(ctx *EvalContext) ([]MapKeyValue, error) 
 		if !ok {
 			return nil, ErrPropertiesParameterExpected
 		}
-		kv := make([]MapKeyValue, 0, len(lit))
+		kv := make([]mapKeyValue, 0, len(lit))
 		for k, v := range lit {
-			kv = append(kv, MapKeyValue{Key: k, Value: v})
+			kv = append(kv, mapKeyValue{key: k, value: v})
 		}
 		return kv, nil
 	}
 	if properties.Map != nil {
-		return properties.Map.KeyValues, nil
+		return properties.Map.keyValues, nil
 	}
 	return nil, nil
 }
@@ -161,20 +161,20 @@ func BuildPatternSymbols(ctx *EvalContext, pattern graph.Pattern) (map[string]*g
 }
 
 func (part PatternPart) getPattern(ctx *EvalContext) (graph.Pattern, error) {
-	pattern := make([]graph.PatternItem, 0, len(part.Path)*2+1)
-	np, err := part.Start.getPattern(ctx)
+	pattern := make([]graph.PatternItem, 0, len(part.path)*2+1)
+	np, err := part.start.getPattern(ctx)
 	if err != nil {
 		return nil, err
 	}
 	pattern = append(pattern, np)
-	for _, pathItem := range part.Path {
-		pi, err := pathItem.Rel.getPattern(ctx)
+	for _, pathItem := range part.path {
+		pi, err := pathItem.rel.getPattern(ctx)
 		if err != nil {
 			return nil, err
 		}
 		pattern = append(pattern, pi)
 
-		pi, err = pathItem.Node.getPattern(ctx)
+		pi, err = pathItem.node.getPattern(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -183,14 +183,14 @@ func (part PatternPart) getPattern(ctx *EvalContext) (graph.Pattern, error) {
 	return pattern, nil
 }
 
-func (np NodePattern) getPattern(ctx *EvalContext) (graph.PatternItem, error) {
+func (np nodePattern) getPattern(ctx *EvalContext) (graph.PatternItem, error) {
 	ret := graph.PatternItem{}
-	if np.Var != nil {
-		ret.Name = string(*np.Var)
+	if np.variable != nil {
+		ret.Name = string(*np.variable)
 	}
-	ret.Labels = np.Labels.getPattern()
+	ret.Labels = np.labels.getPattern()
 	var err error
-	props, err := np.Properties.getPattern(ctx)
+	props, err := np.properties.getPattern(ctx)
 	if err != nil {
 		return graph.PatternItem{}, err
 	}
@@ -203,14 +203,14 @@ func (np NodePattern) getPattern(ctx *EvalContext) (graph.PatternItem, error) {
 	return ret, nil
 }
 
-func (rp RelationshipPattern) getPattern(ctx *EvalContext) (graph.PatternItem, error) {
+func (rp relationshipPattern) getPattern(ctx *EvalContext) (graph.PatternItem, error) {
 	ret := graph.PatternItem{}
-	if rp.Var != nil {
-		ret.Name = string(*rp.Var)
+	if rp.variable != nil {
+		ret.Name = string(*rp.variable)
 	}
-	ret.Labels = rp.RelTypes.getPattern()
-	if rp.Range != nil {
-		from, to, err := rp.Range.Evaluate(ctx)
+	ret.Labels = rp.relTypes.getPattern()
+	if rp.rng != nil {
+		from, to, err := rp.rng.Evaluate(ctx)
 		if err != nil {
 			return graph.PatternItem{}, err
 		}
@@ -227,14 +227,14 @@ func (rp RelationshipPattern) getPattern(ctx *EvalContext) (graph.PatternItem, e
 	} else {
 		ret.Min, ret.Max = 1, 1
 	}
-	if !rp.ToRight && !rp.ToLeft {
+	if !rp.toRight && !rp.toLeft {
 		ret.Undirected = true
-	} else if rp.ToLeft {
-		ret.ToLeft = rp.ToLeft
+	} else if rp.toLeft {
+		ret.ToLeft = rp.toLeft
 	}
 
 	var err error
-	props, err := rp.Properties.getPattern(ctx)
+	props, err := rp.properties.getPattern(ctx)
 	if err != nil {
 		return graph.PatternItem{}, err
 	}
@@ -247,15 +247,15 @@ func (rp RelationshipPattern) getPattern(ctx *EvalContext) (graph.PatternItem, e
 	return ret, nil
 }
 
-func (rt *RelationshipTypes) getPattern() graph.StringSet {
+func (rt *relationshipTypes) getPattern() graph.StringSet {
 	if rt == nil {
 		return nil
 	}
-	if len(rt.Rel) == 0 {
+	if len(rt.rel) == 0 {
 		return nil
 	}
 	ret := graph.NewStringSet()
-	for _, r := range rt.Rel {
+	for _, r := range rt.rel {
 		s := r.String()
 		if len(s) > 0 {
 			ret.Add(s)
