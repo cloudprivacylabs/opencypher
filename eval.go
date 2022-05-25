@@ -347,7 +347,7 @@ func (cs caseClause) Evaluate(ctx *EvalContext) (Value, error) {
 	return RValue{}, nil
 }
 
-func (v Variable) Evaluate(ctx *EvalContext) (Value, error) {
+func (v variable) Evaluate(ctx *EvalContext) (Value, error) {
 	val, err := ctx.GetVar(string(v))
 	if err != nil {
 		return nil, err
@@ -358,8 +358,8 @@ func (v Variable) Evaluate(ctx *EvalContext) (Value, error) {
 
 // Evaluate a regular query, which is a single query with an optional
 // union list
-func (query RegularQuery) Evaluate(ctx *EvalContext) (Value, error) {
-	result, err := query.SingleQuery.Evaluate(ctx)
+func (query regularQuery) Evaluate(ctx *EvalContext) (Value, error) {
+	result, err := query.singleQuery.Evaluate(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +367,7 @@ func (query RegularQuery) Evaluate(ctx *EvalContext) (Value, error) {
 	if !ok {
 		return nil, ErrExpectingResultSet
 	}
-	for _, u := range query.Unions {
+	for _, u := range query.unions {
 		newResult, err := u.singleQuery.Evaluate(ctx)
 		if err != nil {
 			return nil, err
@@ -395,8 +395,8 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		}
 		return nil
 	}
+	results := ResultSet{}
 	if len(query.read) > 0 {
-		results := ResultSet{}
 		for _, r := range query.read {
 			rs, err := r.GetResults(ctx)
 			if err != nil {
@@ -406,10 +406,11 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		}
 
 		for _, upd := range query.update {
-			_, err := upd.Update(ctx, results)
+			v, err := upd.Update(ctx, results)
 			if err != nil {
 				return nil, err
 			}
+			results = v.Get().(ResultSet)
 		}
 		if query.ret == nil {
 			return RValue{Value: ResultSet{}}, nil
@@ -422,18 +423,33 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 	}
 
 	for _, upd := range query.update {
-		if err := upd.TopLevelUpdate(ctx); err != nil {
+		v, err := upd.TopLevelUpdate(ctx)
+		if err != nil {
 			return nil, err
+		}
+		if v != nil && v.Get() != nil {
+			results = v.Get().(ResultSet)
 		}
 	}
 	if query.ret == nil {
 		return RValue{Value: ResultSet{}}, nil
 	}
-	val, err := query.ret.projection.items.Project(ctx, nil)
-	if err != nil {
-		return nil, err
+
+	if len(results.Rows) > 0 {
+		for _, row := range results.Rows {
+			val, err := query.ret.projection.items.Project(ctx, row)
+			if err != nil {
+				return nil, err
+			}
+			ret.Rows = append(ret.Rows, val)
+		}
+	} else {
+		val, err := query.ret.projection.items.Project(ctx, nil)
+		if err != nil {
+			return nil, err
+		}
+		ret.Rows = append(ret.Rows, val)
 	}
-	ret.Rows = append(ret.Rows, val)
 	return RValue{Value: ret}, nil
 }
 
