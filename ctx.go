@@ -2,6 +2,7 @@ package opencypher
 
 import (
 	"strings"
+	"unicode"
 
 	"github.com/cloudprivacylabs/opencypher/graph"
 )
@@ -102,6 +103,26 @@ func (ctx *EvalContext) GetVar(name string) (Value, error) {
 	return val, nil
 }
 
+func (ctx *EvalContext) GetVarsNearestScope() map[string]Value {
+	return ctx.variables
+}
+
 func (ctx *EvalContext) SetVar(name string, value Value) {
 	ctx.variables[name] = value
+}
+
+func (ctx *EvalContext) RemoveVar(name string) {
+	delete(ctx.variables, name)
+}
+
+func (ctx *EvalContext) SetVars(m map[string]Value) {
+	for k, v := range m {
+		if !unicode.IsDigit(rune(k[0])) {
+			ctx.SetVar(k, v)
+		}
+	}
+}
+
+func IsNamedVar(name string) bool {
+	return !unicode.IsDigit(rune(name[0]))
 }

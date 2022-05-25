@@ -14,13 +14,7 @@ Architecture](https://layeredschemas.org).
 ## openCypher
 
 At this point, this library provides partial support for openCypher
-expressions. More support will be added as needed. unsupported
-features include:
-
-  * MERGE
-  * CALL
-  * Transactions
-  * CSV related functions
+expressions. More support will be added as needed. 
   
 openCypher expressions are evaluated using an evaluation context. 
 

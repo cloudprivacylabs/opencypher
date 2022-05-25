@@ -12,9 +12,9 @@ type Evaluatable interface {
 	Evaluate(*EvalContext) (Value, error)
 }
 
-type RegularQuery struct {
-	SingleQuery Evaluatable
-	Unions      []union
+type regularQuery struct {
+	singleQuery Evaluatable
+	unions      []union
 }
 
 type union struct {
@@ -42,7 +42,7 @@ type remove struct {
 }
 
 type removeItem struct {
-	variable   *Variable
+	variable   *variable
 	nodeLabels NodeLabels
 	property   *propertyExpression
 }
@@ -53,14 +53,14 @@ type set struct {
 
 type setItem struct {
 	property   *propertyExpression
-	variable   *Variable
+	variable   *variable
 	op         string
 	expression Expression
 	nodeLabels NodeLabels
 }
 
 type propertyExpression struct {
-	atom   Atom
+	atom   atom
 	lookup []schemaName
 }
 
@@ -86,7 +86,7 @@ type ReadingClause interface {
 
 type UpdatingClause interface {
 	Update(*EvalContext, ResultSet) (Value, error)
-	TopLevelUpdate(*EvalContext) error
+	TopLevelUpdate(*EvalContext) (Value, error)
 }
 
 type Expression interface {
@@ -95,7 +95,7 @@ type Expression interface {
 
 type unwind struct {
 	expr Expression
-	as   Variable
+	as   variable
 }
 
 type orExpression struct {
@@ -177,7 +177,7 @@ type stringOperatorExpression struct {
 }
 
 type propertyOrLabelsExpression struct {
-	atom           Atom
+	atom           atom
 	propertyLookup []schemaName
 	nodeLabels     *NodeLabels
 }
@@ -204,7 +204,7 @@ type projectionItems struct {
 }
 
 type projectionItem struct {
-	variable *Variable
+	variable *variable
 	expr     Expression
 }
 
@@ -245,20 +245,33 @@ type NodeLabels []schemaName
 type symbolicName string
 type reservedWord string
 
-type Variable symbolicName
+type variable symbolicName
+
+type merge struct {
+	pattern PatternPart
+	actions []mergeAction
+}
+
+const mergeActionOnMatch = 0
+const mergeActionOnCreate = 1
+
+type mergeAction struct {
+	on  int
+	set UpdatingClause
+}
 
 type Pattern struct {
 	Parts []PatternPart
 }
 
 type PatternPart struct {
-	variable *Variable
+	variable *variable
 	start    nodePattern
 	path     []patternChain
 }
 
 type nodePattern struct {
-	variable   *Variable
+	variable   *variable
 	labels     *NodeLabels
 	properties *Properties
 }
@@ -271,7 +284,7 @@ type patternChain struct {
 type relationshipPattern struct {
 	toLeft     bool
 	toRight    bool
-	variable   *Variable
+	variable   *variable
 	relTypes   *relationshipTypes
 	rng        *rangeLiteral
 	properties *Properties
@@ -291,18 +304,14 @@ type filterAtom struct {
 	filter filterExpression
 }
 
-type Atom interface {
+type atom interface {
 	Evaluatable
 }
 
 type filterExpression struct {
-	variable Variable
+	variable variable
 	inExpr   Expression
 	where    Expression
-}
-
-type Filter struct {
-	// TODO: Derived from filter expression
 }
 
 type relationshipsPattern struct {
@@ -325,7 +334,7 @@ type functionInvocation struct {
 }
 
 type patternComprehension struct {
-	variable *Variable
+	variable *variable
 	rel      relationshipsPattern
 	where    Expression
 	expr     Expression
@@ -384,12 +393,12 @@ func oC_Query(ctx *parser.OC_QueryContext) Evaluatable {
 	return oC_StandaloneCall(ctx.OC_StandaloneCall().(*parser.OC_StandaloneCallContext))
 }
 
-func oC_RegularQuery(ctx *parser.OC_RegularQueryContext) RegularQuery {
-	ret := RegularQuery{
-		SingleQuery: oC_SingleQuery(ctx.OC_SingleQuery().(*parser.OC_SingleQueryContext)),
+func oC_RegularQuery(ctx *parser.OC_RegularQueryContext) regularQuery {
+	ret := regularQuery{
+		singleQuery: oC_SingleQuery(ctx.OC_SingleQuery().(*parser.OC_SingleQueryContext)),
 	}
 	for _, u := range ctx.AllOC_Union() {
-		ret.Unions = append(ret.Unions, oC_Union(u.(*parser.OC_UnionContext)))
+		ret.unions = append(ret.unions, oC_Union(u.(*parser.OC_UnionContext)))
 	}
 	return ret
 }
@@ -942,8 +951,8 @@ func oC_RelationshipPattern(ctx *parser.OC_RelationshipPatternContext) relations
 	return ret
 }
 
-func oC_Variable(ctx *parser.OC_VariableContext) Variable {
-	return Variable(oC_SymbolicName(ctx.OC_SymbolicName().(*parser.OC_SymbolicNameContext)))
+func oC_Variable(ctx *parser.OC_VariableContext) variable {
+	return variable(oC_SymbolicName(ctx.OC_SymbolicName().(*parser.OC_SymbolicNameContext)))
 }
 
 func oC_RelationshipTypes(ctx *parser.OC_RelationshipTypesContext) relationshipTypes {
@@ -980,7 +989,7 @@ func oC_Parameter(ctx *parser.OC_ParameterContext) Parameter {
 	return ret
 }
 
-func DecimalInteger(ctx antlr.TerminalNode) intLiteral {
+func decimalInteger(ctx antlr.TerminalNode) intLiteral {
 	i, err := strconv.Atoi(ctx.GetText())
 	if err != nil {
 		panic(err)
@@ -1038,7 +1047,7 @@ func oC_IntegerLiteral(ctx *parser.OC_IntegerLiteralContext) intLiteral {
 		}
 		return intLiteral(val)
 	}
-	return DecimalInteger(ctx.DecimalInteger())
+	return decimalInteger(ctx.DecimalInteger())
 }
 
 func oC_BooleanLiteral(ctx *parser.OC_BooleanLiteralContext) booleanLiteral {
@@ -1074,7 +1083,7 @@ func oC_MapLiteral(ctx *parser.OC_MapLiteralContext) *mapLiteral {
 	return ret
 }
 
-func oC_Atom(ctx *parser.OC_AtomContext) Atom {
+func oC_Atom(ctx *parser.OC_AtomContext) atom {
 	if lit := ctx.OC_Literal(); lit != nil {
 		return oC_Literal(lit.(*parser.OC_LiteralContext))
 	}
@@ -1375,12 +1384,27 @@ func oC_Create(ctx *parser.OC_CreateContext) UpdatingClause {
 	return ret
 }
 
-func oC_InQueryCall(ctx *parser.OC_InQueryCallContext) ReadingClause {
-	panic("Unsupported: inQueryCall")
+func oC_Merge(ctx *parser.OC_MergeContext) UpdatingClause {
+	ret := merge{
+		pattern: oC_PatternPart(ctx.OC_PatternPart().(*parser.OC_PatternPartContext)),
+	}
+	for _, action := range ctx.AllOC_MergeAction() {
+		actx := action.(*parser.OC_MergeActionContext)
+		action := mergeAction{
+			set: oC_Set(actx.OC_Set().(*parser.OC_SetContext)),
+		}
+		if actx.MATCH() == nil {
+			action.on = mergeActionOnCreate
+		} else {
+			action.on = mergeActionOnMatch
+		}
+		ret.actions = append(ret.actions, action)
+	}
+	return ret
 }
 
-func oC_Merge(ctx *parser.OC_MergeContext) UpdatingClause {
-	panic("Unsupported: merge")
+func oC_InQueryCall(ctx *parser.OC_InQueryCallContext) ReadingClause {
+	panic("Unsupported: inQueryCall")
 }
 
 func oC_StandaloneCall(ctx *parser.OC_StandaloneCallContext) Evaluatable {

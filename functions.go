@@ -2,6 +2,7 @@ package opencypher
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/cloudprivacylabs/opencypher/graph"
 )
@@ -26,8 +27,10 @@ func (e ErrInvalidFunctionCall) Error() string {
 }
 
 var globalFuncs = map[string]Function{
-	"range":  rangeFunc,
-	"labels": labelsFunc,
+	"range":     rangeFunc,
+	"labels":    labelsFunc,
+	"timestamp": timestampFunc,
+	"type":      typeFunc,
 }
 
 func rangeFunc(ctx *EvalContext, args []Evaluatable) (Value, error) {
@@ -81,4 +84,30 @@ func labelsFunc(ctx *EvalContext, args []Evaluatable) (Value, error) {
 		return nil, fmt.Errorf("Not a node")
 	}
 	return RValue{Value: node.GetLabels().Slice()}, nil
+}
+
+func timestampFunc(ctx *EvalContext, args []Evaluatable) (Value, error) {
+	if len(args) != 0 {
+		return nil, ErrInvalidFunctionCall{"timestamp() does not take args"}
+	}
+	return RValue{Value: int(time.Now().Unix())}, nil
+}
+
+func typeFunc(ctx *EvalContext, args []Evaluatable) (Value, error) {
+	if len(args) != 1 {
+		return nil, fmt.Errorf("type() needs one arg")
+	}
+	v, err := args[0].Evaluate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	edge, ok := v.Get().(graph.Edge)
+	if ok {
+		return RValue{Value: edge.GetLabel()}, nil
+	}
+	edges, ok := v.Get().([]graph.Edge)
+	if !ok || len(edges) != 1 {
+		return nil, fmt.Errorf("Cannot determine type of %T", v.Get())
+	}
+	return RValue{Value: edges[0].GetLabel()}, nil
 }
