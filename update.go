@@ -11,9 +11,7 @@ func (s *set) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	var err error
 	subctx := ctx.SubContext()
 	result.CartesianProduct(func(data map[string]Value) bool {
-		for k, v := range data {
-			subctx.SetVar(k, v)
-		}
+		subctx.SetVars(data)
 		for i := range s.items {
 			if err = s.items[i].update(subctx, data, result); err != nil {
 				return false
@@ -24,11 +22,11 @@ func (s *set) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	return RValue{}, nil
+	return RValue{Value: result}, nil
 }
 
-func (s set) TopLevelUpdate(ctx *EvalContext) error {
-	return fmt.Errorf("Cannot use SET at top level")
+func (s set) TopLevelUpdate(ctx *EvalContext) (Value, error) {
+	return nil, fmt.Errorf("Cannot use SET at top level")
 }
 
 func (s *setItem) update(ctx *EvalContext, data map[string]Value, result ResultSet) (err error) {
@@ -128,16 +126,14 @@ func (s *setItem) update(ctx *EvalContext, data map[string]Value, result ResultS
 	return nil
 }
 
-func (deleteClause) TopLevelUpdate(ctx *EvalContext) error {
-	return fmt.Errorf("Cannot use DELETE at top level")
+func (deleteClause) TopLevelUpdate(ctx *EvalContext) (Value, error) {
+	return nil, fmt.Errorf("Cannot use DELETE at top level")
 }
 
 func (d deleteClause) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	subctx := ctx.SubContext()
 	for _, row := range result.Rows {
-		for k, v := range row {
-			subctx.SetVar(k, v)
-		}
+		subctx.SetVars(row)
 		for _, expr := range d.exprs {
 			v, err := expr.Evaluate(subctx)
 			if err != nil {
@@ -163,19 +159,17 @@ func (d deleteClause) Update(ctx *EvalContext, result ResultSet) (Value, error) 
 			}
 		}
 	}
-	return RValue{Value: ResultSet{}}, nil
+	return RValue{Value: result}, nil
 }
 
-func (remove) TopLevelUpdate(ctx *EvalContext) error {
-	return fmt.Errorf("Cannot use REMOVE at top level")
+func (remove) TopLevelUpdate(ctx *EvalContext) (Value, error) {
+	return nil, fmt.Errorf("Cannot use REMOVE at top level")
 }
 
 func (r remove) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	subctx := ctx.SubContext()
 	for _, row := range result.Rows {
-		for k, v := range row {
-			subctx.SetVar(k, v)
-		}
+		subctx.SetVars(row)
 		for _, item := range r.items {
 			if item.property != nil {
 				value, err := item.property.Evaluate(subctx)
@@ -210,32 +204,32 @@ func (r remove) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	return RValue{Value: result}, nil
 }
 
-func (c create) TopLevelUpdate(ctx *EvalContext) error {
+func (c create) TopLevelUpdate(ctx *EvalContext) (Value, error) {
 	for _, part := range c.pattern.Parts {
-		if err := part.Create(ctx); err != nil {
-			return err
+		if _, _, err := part.Create(ctx, false); err != nil {
+			return nil, err
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func (c create) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	for _, row := range result.Rows {
-		for k, v := range row {
-			ctx.SetVar(k, v)
-		}
-		if err := c.TopLevelUpdate(ctx); err != nil {
+		ctx.SetVars(row)
+		if _, err := c.TopLevelUpdate(ctx); err != nil {
 			return nil, err
 		}
 	}
 	return RValue{Value: result}, nil
 }
 
-func (np nodePattern) Create(ctx *EvalContext) (string, graph.Node, error) {
+func (np nodePattern) Create(ctx *EvalContext, inMerge bool) (string, graph.Node, error) {
 	// Is there a variable
 	var varName string
 	if np.variable != nil {
 		varName = string(*np.variable)
+	}
+	if !inMerge {
 		// Is the var defined already
 		existingNode, err := ctx.GetVar(varName)
 		if err == nil {
@@ -250,6 +244,17 @@ func (np nodePattern) Create(ctx *EvalContext) (string, graph.Node, error) {
 			return varName, node, nil
 		}
 	}
+	node, err := np.createNode(ctx)
+	if err != nil {
+		return "", nil, err
+	}
+	if len(varName) > 0 {
+		ctx.SetVar(varName, ValueOf(node))
+	}
+	return varName, node, nil
+}
+
+func (np nodePattern) createNode(ctx *EvalContext) (graph.Node, error) {
 	labels := graph.NewStringSet()
 	if np.labels != nil {
 		for _, n := range *np.labels {
@@ -258,29 +263,27 @@ func (np nodePattern) Create(ctx *EvalContext) (string, graph.Node, error) {
 	}
 	properties, err := np.properties.getPropertiesMap(ctx)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	node := ctx.graph.NewNode(labels.Slice(), properties)
-	if len(varName) > 0 {
-		ctx.SetVar(varName, ValueOf(node))
-	}
-	return varName, node, nil
+	return node, nil
 }
 
-func (part PatternPart) Create(ctx *EvalContext) error {
-	_, lastNode, err := part.start.Create(ctx)
+func (part PatternPart) Create(ctx *EvalContext, inMerge bool) (graph.Node, []graph.Edge, error) {
+	_, lastNode, err := part.start.Create(ctx, inMerge)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
+	firstNode := lastNode
 	edges := make([]graph.Edge, 0)
 	for _, pathPart := range part.path {
-		_, targetNode, err := pathPart.node.Create(ctx)
+		_, targetNode, err := pathPart.node.Create(ctx, inMerge)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 		edge, err := pathPart.rel.Create(ctx, lastNode, targetNode)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 		edges = append(edges, edge)
 		lastNode = targetNode
@@ -292,7 +295,7 @@ func (part PatternPart) Create(ctx *EvalContext) error {
 			ctx.SetVar(string(*part.variable), ValueOf(edges))
 		}
 	}
-	return nil
+	return firstNode, edges, nil
 }
 
 func (rel relationshipPattern) Create(ctx *EvalContext, from, to graph.Node) (graph.Edge, error) {
@@ -332,4 +335,139 @@ func (rel relationshipPattern) Create(ctx *EvalContext, from, to graph.Node) (gr
 		ctx.SetVar(varName, ValueOf([]graph.Edge{edge}))
 	}
 	return edge, nil
+}
+
+func (m merge) getResults(ctx *EvalContext) (map[string]struct{}, ResultSet, error) {
+	pattern, err := m.pattern.getPattern(ctx)
+	if err != nil {
+		return nil, ResultSet{}, err
+	}
+
+	unbound := make(map[string]struct{})
+	// Get unbound symbols of pattern.
+	for symbol := range pattern.GetSymbolNames() {
+		_, err := ctx.GetVar(symbol)
+		if err == nil {
+			continue
+		}
+		// symbol is not bound
+		unbound[symbol] = struct{}{}
+	}
+
+	results := matchResultAccumulator{
+		evalCtx: ctx,
+	}
+	symbols, err := BuildPatternSymbols(ctx, pattern)
+	if err != nil {
+		return nil, ResultSet{}, err
+	}
+	err = pattern.Run(ctx.graph, symbols, &results)
+	if err != nil {
+		return nil, ResultSet{}, err
+	}
+	return unbound, results.result, nil
+}
+
+func (m merge) resultsToCtx(ctx *EvalContext, results ResultSet) {
+	if len(results.Rows) > 0 {
+		for k := range results.Rows[0] {
+			if IsNamedVar(k) {
+				col := results.Column(k)
+				if len(col) == 1 {
+					ctx.SetVar(k, col[0])
+				} else {
+					ctx.SetVar(k, RValue{Value: col})
+				}
+			}
+		}
+	}
+}
+
+func (m merge) doMerge(ctx *EvalContext) (created bool, matched bool, result ResultSet, err error) {
+	_, result, err = m.getResults(ctx)
+	if err != nil {
+		return
+	}
+	if len(result.Rows) == 0 {
+		// Nothing found
+		subctx := ctx.SubContext()
+		_, _, err = m.pattern.Create(subctx, true)
+		if err != nil {
+			return
+		}
+		vars := subctx.GetVarsNearestScope()
+		row := make(map[string]Value)
+		for k, v := range vars {
+			row[k] = v
+		}
+		result = ResultSet{}
+		result.Append(row)
+		created = true
+		return
+	}
+	// Things found
+	matched = true
+	return
+}
+
+func (m merge) processActions(ctx *EvalContext, created, matched bool, rs ResultSet) error {
+	for _, action := range m.actions {
+		if (created && action.on == mergeActionOnCreate) ||
+			(matched && action.on == mergeActionOnMatch) {
+			_, err := action.set.Update(ctx, rs)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (m merge) Update(ctx *EvalContext, rs ResultSet) (Value, error) {
+	results := ResultSet{}
+	for _, row := range rs.Rows {
+		subctx := ctx.SubContext()
+		subctx.SetVars(row)
+		created, matched, rs, err := m.doMerge(subctx)
+		if err != nil {
+			return nil, err
+		}
+		if err := m.processActions(subctx, created, matched, rs); err != nil {
+			return nil, err
+		}
+		if len(rs.Rows) == 0 {
+			results.Append(row)
+		} else {
+			for _, r := range rs.Rows {
+				newRow := make(map[string]Value)
+				for k, v := range row {
+					newRow[k] = v
+				}
+				for k, v := range r {
+					newRow[k] = v
+				}
+				results.Append(newRow)
+			}
+		}
+	}
+	return RValue{Value: results}, nil
+}
+
+func (m merge) TopLevelUpdate(ctx *EvalContext) (Value, error) {
+	created, matched, rs, err := m.doMerge(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := m.processActions(ctx, created, matched, rs); err != nil {
+		return nil, err
+	}
+	results := ResultSet{}
+	for _, r := range rs.Rows {
+		newRow := make(map[string]Value)
+		for k, v := range r {
+			newRow[k] = v
+		}
+		results.Append(newRow)
+	}
+	return RValue{Value: results}, nil
 }

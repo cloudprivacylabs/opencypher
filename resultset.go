@@ -66,6 +66,19 @@ func (r *ResultSet) find(row map[string]Value) int {
 	return -1
 }
 
+// Column returns a column of results as a value
+func (r *ResultSet) Column(key string) []Value {
+	ret := make([]Value, 0)
+	for _, row := range r.Rows {
+		val, exists := row[key]
+		if !exists {
+			continue
+		}
+		ret = append(ret, val)
+	}
+	return ret
+}
+
 // Append the row to the resultset.
 func (r *ResultSet) Append(row map[string]Value) error {
 	r.Rows = append(r.Rows, row)

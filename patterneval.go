@@ -35,7 +35,6 @@ func (properties Properties) AsLiteral(ctx *EvalContext) ([]mapKeyValue, error) 
 }
 
 type matchResultAccumulator struct {
-	where   Expression
 	evalCtx *EvalContext
 	result  ResultSet
 	err     error
@@ -45,32 +44,7 @@ func (acc *matchResultAccumulator) StoreResult(ctx *graph.MatchContext, path int
 	if acc.err != nil {
 		return
 	}
-	if acc.where != nil {
-		evalContext := acc.evalCtx.SubContext()
-		for k, v := range ctx.LocalSymbols {
-			if nodes := v.NodeSlice(); len(nodes) == 1 {
-				evalContext.SetVar(k, ValueOf(nodes[0]))
-			}
-			if edges := v.EdgeSlice(); edges != nil {
-				evalContext.SetVar(k, ValueOf(edges))
-			}
-		}
-		rs, err := acc.where.Evaluate(evalContext)
-		if err != nil {
-			acc.err = err
-			return
-		}
-		if b, _ := ValueAsBool(rs); !b {
-			return
-		}
-	}
 	// Record results in the context
-	if node, ok := path.(graph.Node); ok {
-		acc.result.AddPath(node, nil)
-	}
-	if edges, ok := path.([]graph.Edge); ok {
-		acc.result.AddPath(nil, edges)
-	}
 	result := make(map[string]Value)
 	for k, v := range symbols {
 		result[k] = RValue{Value: v}

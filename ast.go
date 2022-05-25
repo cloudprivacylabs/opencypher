@@ -86,7 +86,7 @@ type ReadingClause interface {
 
 type UpdatingClause interface {
 	Update(*EvalContext, ResultSet) (Value, error)
-	TopLevelUpdate(*EvalContext) error
+	TopLevelUpdate(*EvalContext) (Value, error)
 }
 
 type Expression interface {
@@ -246,6 +246,19 @@ type symbolicName string
 type reservedWord string
 
 type Variable symbolicName
+
+type merge struct {
+	pattern PatternPart
+	actions []mergeAction
+}
+
+const mergeActionOnMatch = 0
+const mergeActionOnCreate = 1
+
+type mergeAction struct {
+	on  int
+	set UpdatingClause
+}
 
 type Pattern struct {
 	Parts []PatternPart
@@ -1375,12 +1388,27 @@ func oC_Create(ctx *parser.OC_CreateContext) UpdatingClause {
 	return ret
 }
 
-func oC_InQueryCall(ctx *parser.OC_InQueryCallContext) ReadingClause {
-	panic("Unsupported: inQueryCall")
+func oC_Merge(ctx *parser.OC_MergeContext) UpdatingClause {
+	ret := merge{
+		pattern: oC_PatternPart(ctx.OC_PatternPart().(*parser.OC_PatternPartContext)),
+	}
+	for _, action := range ctx.AllOC_MergeAction() {
+		actx := action.(*parser.OC_MergeActionContext)
+		action := mergeAction{
+			set: oC_Set(actx.OC_Set().(*parser.OC_SetContext)),
+		}
+		if actx.MATCH() == nil {
+			action.on = mergeActionOnCreate
+		} else {
+			action.on = mergeActionOnMatch
+		}
+		ret.actions = append(ret.actions, action)
+	}
+	return ret
 }
 
-func oC_Merge(ctx *parser.OC_MergeContext) UpdatingClause {
-	panic("Unsupported: merge")
+func oC_InQueryCall(ctx *parser.OC_InQueryCallContext) ReadingClause {
+	panic("Unsupported: inQueryCall")
 }
 
 func oC_StandaloneCall(ctx *parser.OC_StandaloneCallContext) Evaluatable {
