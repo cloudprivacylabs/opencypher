@@ -206,7 +206,7 @@ func (r remove) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 
 func (c create) TopLevelUpdate(ctx *EvalContext) (Value, error) {
 	for _, part := range c.pattern.Parts {
-		if _, _, err := part.Create(ctx, false); err != nil {
+		if _, _, err := part.Create(ctx); err != nil {
 			return nil, err
 		}
 	}
@@ -223,26 +223,24 @@ func (c create) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	return RValue{Value: result}, nil
 }
 
-func (np nodePattern) Create(ctx *EvalContext, inMerge bool) (string, graph.Node, error) {
+func (np nodePattern) Create(ctx *EvalContext) (string, graph.Node, error) {
 	// Is there a variable
 	var varName string
 	if np.variable != nil {
 		varName = string(*np.variable)
 	}
-	if !inMerge {
-		// Is the var defined already
-		existingNode, err := ctx.GetVar(varName)
-		if err == nil {
-			// Var is defined already. Cannot have labels or properties
-			if np.labels != nil || np.properties != nil {
-				return "", nil, fmt.Errorf("Cannot specify labels or properties in bound node of a CREATE statement")
-			}
-			node, ok := existingNode.Get().(graph.Node)
-			if !ok {
-				return "", nil, fmt.Errorf("Not a node: %s", varName)
-			}
-			return varName, node, nil
+	// Is the var defined already
+	existingNode, err := ctx.GetVar(varName)
+	if err == nil {
+		// Var is defined already. Cannot have labels or properties
+		if np.labels != nil || np.properties != nil {
+			return "", nil, fmt.Errorf("Cannot specify labels or properties in bound node of a CREATE statement")
 		}
+		node, ok := existingNode.Get().(graph.Node)
+		if !ok {
+			return "", nil, fmt.Errorf("Not a node: %s", varName)
+		}
+		return varName, node, nil
 	}
 	node, err := np.createNode(ctx)
 	if err != nil {
@@ -269,15 +267,15 @@ func (np nodePattern) createNode(ctx *EvalContext) (graph.Node, error) {
 	return node, nil
 }
 
-func (part PatternPart) Create(ctx *EvalContext, inMerge bool) (graph.Node, []graph.Edge, error) {
-	_, lastNode, err := part.start.Create(ctx, inMerge)
+func (part PatternPart) Create(ctx *EvalContext) (graph.Node, []graph.Edge, error) {
+	_, lastNode, err := part.start.Create(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 	firstNode := lastNode
 	edges := make([]graph.Edge, 0)
 	for _, pathPart := range part.path {
-		_, targetNode, err := pathPart.node.Create(ctx, inMerge)
+		_, targetNode, err := pathPart.node.Create(ctx)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -326,10 +324,8 @@ func (rel relationshipPattern) Create(ctx *EvalContext, from, to graph.Node) (gr
 	var edge graph.Edge
 	if rel.toLeft && !rel.toRight {
 		edge = ctx.graph.NewEdge(to, from, label, properties)
-	} else if !rel.toLeft && rel.toRight {
-		edge = ctx.graph.NewEdge(from, to, label, properties)
 	} else {
-		return nil, fmt.Errorf("Ambiguous edge direction")
+		edge = ctx.graph.NewEdge(from, to, label, properties)
 	}
 	if len(varName) > 0 {
 		ctx.SetVar(varName, ValueOf([]graph.Edge{edge}))
@@ -391,7 +387,7 @@ func (m merge) doMerge(ctx *EvalContext) (created bool, matched bool, result Res
 	if len(result.Rows) == 0 {
 		// Nothing found
 		subctx := ctx.SubContext()
-		_, _, err = m.pattern.Create(subctx, true)
+		_, _, err = m.pattern.Create(subctx)
 		if err != nil {
 			return
 		}

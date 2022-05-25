@@ -347,7 +347,7 @@ func (cs caseClause) Evaluate(ctx *EvalContext) (Value, error) {
 	return RValue{}, nil
 }
 
-func (v Variable) Evaluate(ctx *EvalContext) (Value, error) {
+func (v variable) Evaluate(ctx *EvalContext) (Value, error) {
 	val, err := ctx.GetVar(string(v))
 	if err != nil {
 		return nil, err
@@ -358,8 +358,8 @@ func (v Variable) Evaluate(ctx *EvalContext) (Value, error) {
 
 // Evaluate a regular query, which is a single query with an optional
 // union list
-func (query RegularQuery) Evaluate(ctx *EvalContext) (Value, error) {
-	result, err := query.SingleQuery.Evaluate(ctx)
+func (query regularQuery) Evaluate(ctx *EvalContext) (Value, error) {
+	result, err := query.singleQuery.Evaluate(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +367,7 @@ func (query RegularQuery) Evaluate(ctx *EvalContext) (Value, error) {
 	if !ok {
 		return nil, ErrExpectingResultSet
 	}
-	for _, u := range query.Unions {
+	for _, u := range query.unions {
 		newResult, err := u.singleQuery.Evaluate(ctx)
 		if err != nil {
 			return nil, err

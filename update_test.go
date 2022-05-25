@@ -402,6 +402,18 @@ func TestMerge(t *testing.T) {
 		tap = g.NewNode([]string{"Movie"}, map[string]interface{}{
 			"title": "The American President",
 		})
+
+		g.NewEdge(charlieSheen, ws, "ACTED_IN", nil)
+		g.NewEdge(michaelDouglas, ws, "ACTED_IN", nil)
+		g.NewEdge(oliverStone, ws, "ACTED_IN", nil)
+		g.NewEdge(martinSheen, ws, "ACTED_IN", nil)
+
+		g.NewEdge(michaelDouglas, tap, "ACTED_IN", nil)
+		g.NewEdge(martinSheen, tap, "ACTED_IN", nil)
+		g.NewEdge(robReiner, tap, "ACTED_IN", nil)
+
+		g.NewEdge(charlieSheen, martinSheen, "FATHER", nil)
+
 		return g
 	}
 	_ = charlieSheen
@@ -519,172 +531,113 @@ func TestMerge(t *testing.T) {
 		t.Errorf("not found")
 	}
 
-	// 4. Merge relationships
-	// 4.1. Merge on a relationship
-	// MERGE can be used to match or create a relationship.
+	// 4.1. Merge on a relationship MERGE can be used to match or create
+	// a relationship.  'Charlie Sheen' had already been marked as
+	// acting in 'Wall Street', so the existing relationship is found
+	// and returned. Note that in order to match or create a
+	// relationship when using MERGE, at least one bound node must be
+	// specified, which is done via the MATCH clause in the above
+	// example.
 
-	// Query
-	// Cypher
-	// Copy to Clipboard
-	// Run in Neo4j Browser
-	// MATCH
-	//   (charlie:Person {name: 'Charlie Sheen'}),
-	//   (wallStreet:Movie {title: 'Wall Street'})
-	// MERGE (charlie)-[r:ACTED_IN]->(wallStreet)
-	// RETURN charlie.name, type(r), wallStreet.title
-	// 'Charlie Sheen' had already been marked as acting in 'Wall Street', so the existing relationship is found and returned. Note that in order to match or create a relationship when using MERGE, at least one bound node must be specified, which is done via the MATCH clause in the above example.
+	g = getGraph()
+	n = g.NumNodes()
+	res, err = ParseAndEvaluate(`	 MATCH
+	   (charlie:Person {name: 'Charlie Sheen'}),
+	   (wallStreet:Movie {title: 'Wall Street'})
+	 MERGE (charlie)-[r:ACTED_IN]->(wallStreet)
+	 RETURN charlie.name, type(r), wallStreet.title
+`, NewEvalContext(g))
+	if err != nil {
+		t.Error(err)
+	}
+	{
+		rs := res.Get().(ResultSet).Rows[0]
+		if rs["1"].Get() != "Charlie Sheen" || rs["2"].Get() != "ACTED_IN" || rs["3"].Get() != "Wall Street" {
+			t.Errorf("Wrong data: %v", rs)
+		}
+	}
 
-	// Table 9. Result
-	// charlie.name	type(r)	wallStreet.title
-	// "Charlie Sheen"
-
-	// "ACTED_IN"
-
-	// "Wall Street"
-
-	// Rows: 1
-
-	// 4.2. Merge on multiple relationships
-	// Query
-	// Cypher
-	// Copy to Clipboard
-	// Run in Neo4j Browser
-	// MATCH
-	//   (oliver:Person {name: 'Oliver Stone'}),
-	//   (reiner:Person {name: 'Rob Reiner'})
-	// MERGE (oliver)-[:DIRECTED]->(movie:Movie)<-[:ACTED_IN]-(reiner)
-	// RETURN movie
-	// In our example graph, 'Oliver Stone' and 'Rob Reiner' have never worked together. When we try to MERGE a "movie between them, Neo4j will not use any of the existing movies already connected to either person. Instead, a new 'movie' node is created.
-
-	// Table 10. Result
-	// movie
-	// Node[7]{}
-
-	// Rows: 1
-	// Nodes created: 1
-	// Relationships created: 2
-	// Labels added: 1
+	// 4.2. Merge on multiple relationships In our example graph,
+	// 'Oliver Stone' and 'Rob Reiner' have never worked together. When
+	// we try to MERGE a "movie between them, a new 'movie' node is
+	// created.
+	g = getGraph()
+	n = g.NumNodes()
+	res, err = ParseAndEvaluate(`	 	 MATCH
+	   (oliver:Person {name: 'Oliver Stone'}),
+	   (reiner:Person {name: 'Rob Reiner'})
+	 MERGE (oliver)-[:DIRECTED]->(movie:Movie)<-[:ACTED_IN]-(reiner)
+	 RETURN movie
+`, NewEvalContext(g))
+	if err != nil {
+		t.Error(err)
+	}
+	{
+		rs := res.Get().(ResultSet).Rows[0]
+		if !rs["1"].Get().(graph.Node).HasLabel("Movie") {
+			t.Errorf("Wrong data: %v", rs)
+		}
+	}
 
 	// 4.3. Merge on an undirected relationship
 	// MERGE can also be used with an undirected relationship. When it needs to create a new one, it will pick a direction.
-
-	// Query
-	// Cypher
-	// Copy to Clipboard
-	// Run in Neo4j Browser
-	// MATCH
-	//   (charlie:Person {name: 'Charlie Sheen'}),
-	//   (oliver:Person {name: 'Oliver Stone'})
-	// MERGE (charlie)-[r:KNOWS]-(oliver)
-	// RETURN r
-	// As 'Charlie Sheen' and 'Oliver Stone' do not know each other this MERGE query will create a KNOWS relationship between them. The direction of the created relationship is arbitrary.
-
-	// Table 11. Result
-	// r
-	// :KNOWS[8]{}
-
-	// Rows: 1
-	// Relationships created: 1
+	g = getGraph()
+	n = g.NumNodes()
+	res, err = ParseAndEvaluate(`		 MATCH
+	   (charlie:Person {name: 'Charlie Sheen'}),
+	   (oliver:Person {name: 'Oliver Stone'})
+	 MERGE (charlie)-[r:KNOWS]-(oliver)
+	 RETURN r
+`, NewEvalContext(g))
+	if err != nil {
+		t.Error(err)
+	}
+	{
+		rs := res.Get().(ResultSet).Rows[0]
+		if rs["1"].Get().([]graph.Edge)[0].GetLabel() != "KNOWS" {
+			t.Errorf("Wrong data: %v", rs)
+		}
+	}
 
 	// 4.4. Merge on a relationship between two existing nodes
 	// MERGE can be used in conjunction with preceding MATCH and MERGE clauses to create a relationship between two bound nodes 'm' and 'n', where 'm' is returned by MATCH and 'n' is created or matched by the earlier MERGE.
-
-	// Query
-	// Cypher
-	// Copy to Clipboard
-	// Run in Neo4j Browser
-	// MATCH (person:Person)
-	// MERGE (city:City {name: person.bornIn})
-	// MERGE (person)-[r:BORN_IN]->(city)
-	// RETURN person.name, person.bornIn, city
 	// This builds on the example from Merge single node derived from an existing node property. The second MERGE creates a BORN_IN relationship between each person and a city corresponding to the value of the person’s bornIn property. 'Charlie Sheen', 'Rob Reiner' and 'Oliver Stone' all have a BORN_IN relationship to the 'same' City node ('New York').
 
-	// Table 12. Result
-	// person.name	person.bornIn	city
-	// "Charlie Sheen"
+	g = getGraph()
+	n = g.NumNodes()
+	res, err = ParseAndEvaluate(`		 	 MATCH (person:Person)
+	 MERGE (city:City {name: person.bornIn})
+	 MERGE (person)-[r:BORN_IN]->(city)
+	 RETURN person.name, person.bornIn, city
+`, NewEvalContext(g))
+	if err != nil {
+		t.Error(err)
+	}
+	{
+		n := graph.NextNodesWith(charlieSheen, "BORN_IN")
+		if x, _ := n[0].GetProperty("name"); x != "New York" {
+			t.Errorf("Wrong data: %v", n)
+		}
+		n = graph.NextNodesWith(martinSheen, "BORN_IN")
+		if x, _ := n[0].GetProperty("name"); x != "Ohio" {
+			t.Errorf("Wrong data: %v", n)
+		}
+	}
 
-	// "New York"
-
-	// Node[7]{name:"New York"}
-
-	// "Martin Sheen"
-
-	// "Ohio"
-
-	// Node[8]{name:"Ohio"}
-
-	// "Michael Douglas"
-
-	// "New Jersey"
-
-	// Node[9]{name:"New Jersey"}
-
-	// "Oliver Stone"
-
-	// "New York"
-
-	// Node[7]{name:"New York"}
-
-	// "Rob Reiner"
-
-	// "New York"
-
-	// Node[7]{name:"New York"}
-
-	// Rows: 5
-	// Nodes created: 3
-	// Relationships created: 5
-	// Properties set: 3
-	// Labels added: 3
-
-	// 4.5. Merge on a relationship between an existing node and a merged node derived from a node property
-	// MERGE can be used to simultaneously create both a new node 'n' and a relationship between a bound node 'm' and 'n'.
-
-	// Query
-	// Cypher
-	// Copy to Clipboard
-	// Run in Neo4j Browser
-	// MATCH (person:Person)
-	// MERGE (person)-[r:HAS_CHAUFFEUR]->(chauffeur:Chauffeur {name: person.chauffeurName})
-	// RETURN person.name, person.chauffeurName, chauffeur
-	// As MERGE found no matches — in our example graph, there are no nodes labeled with Chauffeur and no HAS_CHAUFFEUR relationships — MERGE creates five nodes labeled with Chauffeur, each of which contains a name property whose value corresponds to each matched Person node’s chauffeurName property value. MERGE also creates a HAS_CHAUFFEUR relationship between each Person node and the newly-created corresponding Chauffeur node. As 'Charlie Sheen' and 'Michael Douglas' both have a chauffeur with the same name — 'John Brown' — a new node is created in each case, resulting in 'two' Chauffeur nodes having a name of 'John Brown', correctly denoting the fact that even though the name property may be identical, these are two separate people. This is in contrast to the example shown above in Merge on a relationship between two existing nodes, where we used the first MERGE to bind the City nodes to prevent them from being recreated (and thus duplicated) in the second MERGE.
-
-	// Table 13. Result
-	// person.name	person.chauffeurName	chauffeur
-	// "Charlie Sheen"
-
-	// "John Brown"
-
-	// Node[7]{name:"John Brown"}
-
-	// "Martin Sheen"
-
-	// "Bob Brown"
-
-	// Node[8]{name:"Bob Brown"}
-
-	// "Michael Douglas"
-
-	// "John Brown"
-
-	// Node[9]{name:"John Brown"}
-
-	// "Oliver Stone"
-
-	// "Bill White"
-
-	// Node[10]{name:"Bill White"}
-
-	// "Rob Reiner"
-
-	// "Ted Green"
-
-	// Node[11]{name:"Ted Green"}
-
-	// Rows: 5
-	// Nodes created: 5
-	// Relationships created: 5
-	// Properties set: 5
-	// Labels added: 5
-
+	// 4.5. Merge on a relationship between an existing node and a
+	// merged node derived from a node property. MERGE can be used to
+	// simultaneously create both a new node 'n' and a relationship
+	// between a bound node 'm' and 'n'.
+	g = getGraph()
+	n = g.NumNodes()
+	res, err = ParseAndEvaluate(`	 MATCH (person:Person)
+	 MERGE (person)-[r:HAS_CHAUFFEUR]->(chauffeur:Chauffeur {name: person.chauffeurName})
+	 RETURN person.name, person.chauffeurName, chauffeur
+`, NewEvalContext(g))
+	if err != nil {
+		t.Error(err)
+	}
+	if g.NumNodes() != n+5 {
+		t.Errorf("Wrong numnodes")
+	}
 }
