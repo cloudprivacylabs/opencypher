@@ -15,8 +15,9 @@
 package graph
 
 type OCGraph struct {
-	index *graphIndex
-	store OCStore
+	index  *graphIndex
+	store  OCStore
+	idBase int
 }
 
 func NewOCGraph() *OCGraph {
@@ -28,7 +29,10 @@ func NewOCGraph() *OCGraph {
 
 // NewNode creates a new node with the given labels and properties
 func (g *OCGraph) NewNode(labels []string, properties map[string]interface{}) Node {
-	return g.NewOCNode(labels, properties)
+	node := g.NewOCNode(labels, properties)
+	node.id = g.idBase
+	g.idBase++
+	return node
 }
 
 // NewOCNode creates a new node with the given labels and properties

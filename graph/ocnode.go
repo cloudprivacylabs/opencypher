@@ -25,11 +25,13 @@ type OCNode struct {
 	graph    *OCGraph
 	incoming EdgeMap
 	outgoing EdgeMap
+	id       int
 }
 
 func (node *OCNode) GetGraph() Graph        { return node.graph }
 func (node *OCNode) GetLabels() StringSet   { return node.labels.Clone() }
 func (node *OCNode) HasLabel(s string) bool { return node.labels.Has(s) }
+func (node *OCNode) GetID() int             { return node.id }
 
 // Returns an edge iterator for incoming or outgoing edges
 func (node *OCNode) GetEdges(dir EdgeDir) EdgeIterator {

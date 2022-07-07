@@ -385,8 +385,32 @@ func (query regularQuery) Evaluate(ctx *EvalContext) (Value, error) {
 
 func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 	ret := ResultSet{}
+	skip := -1
+	limit := -1
+	if query.ret != nil {
+		var err error
+		if query.ret.projection.skip != nil {
+			skip, err = mustInt(query.ret.projection.skip.Evaluate(ctx))
+			if err != nil {
+				return nil, err
+			}
+		}
+		if query.ret.projection.limit != nil {
+			limit, err = mustInt(query.ret.projection.limit.Evaluate(ctx))
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	project := func(rows []map[string]Value) error {
-		for _, item := range rows {
+		for index, item := range rows {
+			if skip != -1 && index < skip {
+				continue
+			}
+			if limit != -1 && len(ret.Rows) > limit {
+				break
+			}
 			val, err := query.ret.projection.items.Project(ctx, item)
 			if err != nil {
 				return err
