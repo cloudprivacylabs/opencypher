@@ -408,7 +408,7 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 			if skip != -1 && index < skip {
 				continue
 			}
-			if limit != -1 && len(ret.Rows) > limit {
+			if limit != -1 && len(ret.Rows) >= limit {
 				break
 			}
 			val, err := query.ret.projection.items.Project(ctx, item)
