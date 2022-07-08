@@ -359,7 +359,11 @@ func (v variable) Evaluate(ctx *EvalContext) (Value, error) {
 // Evaluate a regular query, which is a single query with an optional
 // union list
 func (query regularQuery) Evaluate(ctx *EvalContext) (Value, error) {
-	result, err := query.singleQuery.Evaluate(ctx)
+	contexts := make([]*EvalContext, 0)
+
+	lastContext := ctx.SubContext()
+	contexts = append(contexts, lastContext)
+	result, err := query.singleQuery.Evaluate(lastContext)
 	if err != nil {
 		return nil, err
 	}
@@ -368,7 +372,9 @@ func (query regularQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		return nil, ErrExpectingResultSet
 	}
 	for _, u := range query.unions {
-		newResult, err := u.singleQuery.Evaluate(ctx)
+		lastContext = ctx.SubContext()
+		contexts = append(contexts, lastContext)
+		newResult, err := u.singleQuery.Evaluate(lastContext)
 		if err != nil {
 			return nil, err
 		}
@@ -379,6 +385,9 @@ func (query regularQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		if err := resultSet.Union(newResultSet, u.all); err != nil {
 			return nil, err
 		}
+	}
+	for _, c := range contexts {
+		ctx.SetVars(c.GetVarsNearestScope())
 	}
 	return RValue{Value: resultSet}, nil
 }
