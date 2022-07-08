@@ -120,7 +120,7 @@ func (r *ResultSet) Add(rs ResultSet) {
 func (r *ResultSet) Union(src ResultSet, all bool) error {
 	for _, sourceRow := range src.Rows {
 		appnd := all
-		if !appnd && r.find(sourceRow) != -1 {
+		if !appnd && r.find(sourceRow) == -1 {
 			appnd = true
 		}
 		if appnd {
