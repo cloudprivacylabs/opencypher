@@ -30,73 +30,92 @@ func Sources(graph Graph) []Node {
 // Node isomorphism check will fail if one node is equivalent to
 // multiple nodes
 func CheckIsomorphism(g1, g2 Graph, nodeEquivalenceFunc func(n1, n2 Node) bool, edgeEquivalenceFunc func(e1, e2 Edge) bool) bool {
-	// Map of nodes1 -> nodes2
-	nodeMapping1_2 := make(map[Node]Node)
-	// Map of nodes2 -> nodes1
-	nodeMapping2_1 := make(map[Node]Node)
-
 	if g1.NumNodes() != g2.NumNodes() || g1.NumEdges() != g2.NumEdges() {
 		return false
 	}
 
-	for nodes := g1.GetNodes(); nodes.Next(); {
-		node1 := nodes.Node()
-		for nodes2 := g2.GetNodes(); nodes2.Next(); {
-			node2 := nodes2.Node()
-			if node1.GetLabels().IsEqual(node2.GetLabels()) {
-				if nodeEquivalenceFunc(node1, node2) {
-					if _, ok := nodeMapping1_2[node1]; ok {
-						return false
-					}
-					nodeMapping1_2[node1] = node2
-					if _, ok := nodeMapping2_1[node2]; ok {
-						return false
-					}
-					nodeMapping2_1[node2] = node1
-				}
+	// Slice of all nodes of g1
+	all1Nodes := NodeSlice(g1.GetNodes())
+	// Possible node equivalences. equivalences[i] is a slices of nodes of n2 that are possibly equivalent to all1Nodes[i]
+	equivalences := make([][]Node, len(all1Nodes))
+
+	// Fill possible equivalences
+	for i, node1 := range all1Nodes {
+		for nodes := g1.GetNodes(); nodes.Next(); {
+			node2 := nodes.Node()
+			if node1.GetLabels().IsEqual(node2.GetLabels()) && nodeEquivalenceFunc(node1, node2) {
+				equivalences[i] = append(equivalences[i], node2)
 			}
 		}
+		if len(equivalences[i]) == 0 {
+			return false
+		}
 	}
-	if len(nodeMapping1_2) != g1.NumNodes() {
+
+	nodeEquivalences := make([]int, len(all1Nodes))
+
+	// build a node equivalence map based on the current state of nodeEquivalences. nodeEquivalences must be valid
+	buildNodeEquivalence := func() map[Node]Node {
+		eq := make(map[Node]Node)
+		for i := range nodeEquivalences {
+			node1 := all1Nodes[i]
+			node2 := equivalences[i][nodeEquivalences[i]]
+			eq[node1] = node2
+		}
+		return eq
+	}
+
+	// Increment node equivalences to the next node permutation
+	next := func() bool {
+		for index := range nodeEquivalences {
+			nodeEquivalences[index]++
+			if nodeEquivalences[index] < len(equivalences[index]) {
+				return true
+			}
+			nodeEquivalences[index] = 0
+		}
 		return false
 	}
-	// Node equivalences are established, now check edge equivalences
-	for node1, node2 := range nodeMapping1_2 {
-		// node1 and node2 are equivalent. Now we check if equivalent edges go to equivalent nodes
-		edges1 := EdgeSlice(node1.GetEdges(OutgoingEdge))
-		edges2 := EdgeSlice(node2.GetEdges(OutgoingEdge))
-		// There must be same number of edges
-		if len(edges1) != len(edges2) {
-			return false
-		}
-		// Find equivalent edges
-		edgeMap := make(map[Edge]Edge)
-		for _, edge1 := range edges1 {
-			found := false
-			for _, edge2 := range edges2 {
-				toNode1 := nodeMapping1_2[edge1.GetTo()]
-				toNode2 := edge2.GetTo()
-				if toNode1 == toNode2 {
-					if edge1.GetLabel() == edge2.GetLabel() &&
-						edgeEquivalenceFunc(edge1, edge2) {
-						if found {
-							// Multiple edges match
-							return false
-						}
-						edgeMap[edge1] = edge2
-						found = true
-					}
-				}
-			}
-			if !found {
+
+	isIsomorphism := func(nodeMapping map[Node]Node) bool {
+		for node1, node2 := range nodeMapping {
+			// node1 and node2 are equivalent. Now we check if equivalent edges go to equivalent nodes
+			edges1 := EdgeSlice(node1.GetEdges(OutgoingEdge))
+			edges2 := EdgeSlice(node2.GetEdges(OutgoingEdge))
+			// There must be same number of edges
+			if len(edges1) != len(edges2) {
 				return false
 			}
+
+			for _, edge1 := range edges1 {
+				found := false
+				for _, edge2 := range edges2 {
+					if edge1.GetLabel() == edge2.GetLabel() &&
+						nodeMapping[edge1.GetTo()] == edge2.GetTo() &&
+						edgeEquivalenceFunc(edge1, edge2) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return false
+				}
+			}
 		}
-		if len(edgeMap) != len(edges1) {
-			return false
+		return true
+	}
+
+	// Iterate possible node equivalences, and check isomorphism
+	for {
+		nodeMapping := buildNodeEquivalence()
+		if isIsomorphism(nodeMapping) {
+			return true
+		}
+		if !next() {
+			break
 		}
 	}
-	return true
+	return false
 }
 
 // ForEachNode iterates through all the nodes of g until predicate
