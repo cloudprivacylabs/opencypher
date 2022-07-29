@@ -14,6 +14,7 @@
 package graph
 
 import (
+	"encoding/json"
 	"sort"
 	"strings"
 )
@@ -118,4 +119,17 @@ func (set StringSet) SortedSlice() []string {
 
 func (set StringSet) String() string {
 	return strings.Join(set.Slice(), ", ")
+}
+
+func (set StringSet) MarshalJSON() ([]byte, error) {
+	return json.Marshal(set.Slice())
+}
+
+func (set StringSet) UnmarshalJSON(in []byte) error {
+	var arr []string
+	if err := json.Unmarshal(in, &arr); err != nil {
+		return err
+	}
+	set = NewStringSet(arr...)
+	return nil
 }
