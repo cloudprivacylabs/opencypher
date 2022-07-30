@@ -23,12 +23,10 @@ func Sources(graph Graph) []Node {
 
 // CheckIsomoprhism checks to see if graphs given are equal as defined
 // by the edge equivalence and node equivalence functions. The
-// nodeEquivalenceFunction will be called for nodes whose labels are
-// the same. The edgeEquivalenceFunction will be called for edges
-// connecting equivalent nodes with the same labels.
+// nodeEquivalenceFunction will be called for all pairs of nodes. The
+// edgeEquivalenceFunction will be called for edges connecting
+// equivalent nodes.
 //
-// Node isomorphism check will fail if one node is equivalent to
-// multiple nodes
 func CheckIsomorphism(g1, g2 Graph, nodeEquivalenceFunc func(n1, n2 Node) bool, edgeEquivalenceFunc func(e1, e2 Edge) bool) bool {
 	if g1.NumNodes() != g2.NumNodes() || g1.NumEdges() != g2.NumEdges() {
 		return false
@@ -41,9 +39,9 @@ func CheckIsomorphism(g1, g2 Graph, nodeEquivalenceFunc func(n1, n2 Node) bool, 
 
 	// Fill possible equivalences
 	for i, node1 := range all1Nodes {
-		for nodes := g1.GetNodes(); nodes.Next(); {
+		for nodes := g2.GetNodes(); nodes.Next(); {
 			node2 := nodes.Node()
-			if node1.GetLabels().IsEqual(node2.GetLabels()) && nodeEquivalenceFunc(node1, node2) {
+			if nodeEquivalenceFunc(node1, node2) {
 				equivalences[i] = append(equivalences[i], node2)
 			}
 		}
@@ -90,8 +88,7 @@ func CheckIsomorphism(g1, g2 Graph, nodeEquivalenceFunc func(n1, n2 Node) bool, 
 			for _, edge1 := range edges1 {
 				found := false
 				for _, edge2 := range edges2 {
-					if edge1.GetLabel() == edge2.GetLabel() &&
-						nodeMapping[edge1.GetTo()] == edge2.GetTo() &&
+					if nodeMapping[edge1.GetTo()] == edge2.GetTo() &&
 						edgeEquivalenceFunc(edge1, edge2) {
 						found = true
 						break
