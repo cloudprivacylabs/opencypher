@@ -29,7 +29,8 @@ func NewFastSet() *FastSet {
 	return &FastSet{}
 }
 
-func (f FastSet) Len() int { return len(f.m) }
+func (f FastSet) Len() int  { return len(f.m) }
+func (f FastSet) Size() int { return len(f.m) }
 
 func (f *FastSet) Add(item interface{}) {
 	if f.m == nil {

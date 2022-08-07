@@ -16,7 +16,6 @@ package graph
 
 import (
 	"github.com/emirpasic/gods/maps/linkedhashmap"
-	"github.com/emirpasic/gods/sets/linkedhashset"
 )
 
 // An EdgeMap stores edges indexed by edge label
@@ -35,13 +34,13 @@ func (em *EdgeMap) Add(edge *OCEdge) {
 		em.m = linkedhashmap.New()
 	}
 
-	var set *linkedhashset.Set
+	var set *FastSet
 	v, found := em.m.Get(edge.label)
 	if !found {
-		set = linkedhashset.New()
+		set = NewFastSet()
 		em.m.Put(edge.label, set)
 	} else {
-		set = v.(*linkedhashset.Set)
+		set = v.(*FastSet)
 	}
 	k := set.Size()
 	set.Add(edge)
@@ -54,12 +53,12 @@ func (em EdgeMap) Remove(edge *OCEdge) {
 	if em.m == nil {
 		return
 	}
-	var set *linkedhashset.Set
+	var set *FastSet
 	v, found := em.m.Get(edge.label)
 	if !found {
 		return
 	}
-	set = v.(*linkedhashset.Set)
+	set = v.(*FastSet)
 	k := set.Size()
 	set.Remove(edge)
 	if set.Size() < k {
@@ -101,9 +100,9 @@ func (itr *edgeMapIterator) Next() bool {
 	if !itr.labels.Next() {
 		return false
 	}
-	set := itr.labels.Value().(*linkedhashset.Set)
+	set := itr.labels.Value().(*FastSet)
 	setItr := set.Iterator()
-	itr.current = &edgeIterator{withSize(&setItr, -1)}
+	itr.current = &edgeIterator{withSize(setItr, set.Size())}
 	itr.current.Next()
 	return true
 }
@@ -134,9 +133,9 @@ func (em EdgeMap) IteratorLabel(label string) EdgeIterator {
 	if !found {
 		return &edgeIterator{&emptyIterator{}}
 	}
-	set := v.(*linkedhashset.Set)
+	set := v.(*FastSet)
 	i := set.Iterator()
-	return &edgeIterator{withSize(&i, set.Size())}
+	return &edgeIterator{withSize(i, set.Size())}
 }
 
 func (em EdgeMap) IteratorAnyLabel(labels StringSet) EdgeIterator {
@@ -152,8 +151,8 @@ func (em EdgeMap) IteratorAnyLabel(labels StringSet) EdgeIterator {
 				if !found {
 					continue
 				}
-				itr := v.(*linkedhashset.Set).Iterator()
-				return withSize(&itr, -1)
+				itr := v.(*FastSet).Iterator()
+				return withSize(itr, -1)
 			}
 			return nil
 		},

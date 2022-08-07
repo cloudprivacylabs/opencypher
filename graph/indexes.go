@@ -15,7 +15,6 @@
 package graph
 
 import (
-	"github.com/emirpasic/gods/sets/linkedhashset"
 	"github.com/emirpasic/gods/trees/btree"
 )
 
@@ -30,10 +29,10 @@ func (s *setTree) add(key interface{}, item interface{}) {
 	}
 	v, found := s.tree.Get(key)
 	if !found {
-		v = linkedhashset.New()
+		v = NewFastSet()
 		s.tree.Put(key, v)
 	}
-	set := v.(*linkedhashset.Set)
+	set := v.(*FastSet)
 	set.Add(item)
 }
 
@@ -45,7 +44,7 @@ func (s setTree) remove(key interface{}, item interface{}) {
 	if !found {
 		return
 	}
-	set := v.(*linkedhashset.Set)
+	set := v.(*FastSet)
 	set.Remove(item)
 	if set.Size() == 0 {
 		s.tree.Remove(key)
@@ -61,9 +60,9 @@ func (s setTree) find(key interface{}) Iterator {
 	if !found {
 		return emptyIterator{}
 	}
-	set := v.(*linkedhashset.Set)
+	set := v.(*FastSet)
 	itr := set.Iterator()
-	return withSize(&itr, set.Size())
+	return withSize(itr, set.Size())
 }
 
 func (s setTree) valueItr() Iterator {
@@ -76,9 +75,9 @@ func (s setTree) valueItr() Iterator {
 			if !treeItr.Next() {
 				return nil
 			}
-			set := treeItr.Value().(*linkedhashset.Set)
+			set := treeItr.Value().(*FastSet)
 			itr := set.Iterator()
-			return withSize(&itr, set.Size())
+			return withSize(itr, set.Size())
 		},
 	}
 }
