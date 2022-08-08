@@ -75,3 +75,7 @@ func CopyNode(sourceNode Node, target Graph, clonePropertyFunc func(string, inte
 func CopyEdge(edge Edge, target Graph, clonePropertyFunc func(string, interface{}) interface{}, nodeMap map[Node]Node) Edge {
 	return target.(*OCGraph).cloneEdge(nodeMap[edge.GetFrom()], nodeMap[edge.GetTo()], edge.(*OCEdge), clonePropertyFunc)
 }
+
+func CloneEdge(from, to Node, edge Edge, target Graph, clonePropertyFunc func(string, interface{}) interface{}) Edge {
+	return target.(*OCGraph).cloneEdge(from, to, edge.(*OCEdge), clonePropertyFunc)
+}
