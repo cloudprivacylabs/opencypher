@@ -15,61 +15,67 @@
 package graph
 
 type OCGraph struct {
-	index  *graphIndex
-	store  OCStore
-	idBase int
+	index    graphIndex
+	allNodes NodeSet
+	allEdges EdgeMap
+	idBase   int
 }
 
 func NewOCGraph() *OCGraph {
 	return &OCGraph{
-		store: *NewOCStore(),
-		index: &graphIndex{},
+		index: graphIndex{},
 	}
 }
 
 // NewNode creates a new node with the given labels and properties
 func (g *OCGraph) NewNode(labels []string, properties map[string]interface{}) Node {
 	node := g.NewOCNode(labels, properties)
-	node.id = g.idBase
-	g.idBase++
 	return node
 }
 
 // NewOCNode creates a new node with the given labels and properties
 func (g *OCGraph) NewOCNode(labels []string, properties map[string]interface{}) *OCNode {
 	node := &OCNode{labels: NewStringSet(labels...), Properties: Properties(properties), graph: g}
+	node.id = g.idBase
+	g.idBase++
 	g.addNode(node)
 	return node
 }
 
-func (g *OCGraph) addNode(node *OCNode) {
-	g.store.AddNode(node)
-	if g.index != nil {
-		g.index.addNodeToIndex(node)
+func (g *OCGraph) cloneNode(node *OCNode, cloneProperty func(string, interface{}) interface{}) *OCNode {
+	newNode := &OCNode{
+		labels:     node.labels.Clone(),
+		Properties: node.Properties.clone(cloneProperty),
+		graph:      g,
 	}
+	newNode.id = g.idBase
+	g.idBase++
+	g.addNode(newNode)
+	return newNode
+}
+
+func (g *OCGraph) addNode(node *OCNode) {
+	g.allNodes.Add(node)
+	g.index.addNodeToIndex(node)
 }
 
 func (g *OCGraph) SetNodeLabels(node *OCNode, labels StringSet) {
-	if g.index != nil {
-		g.index.removeNodeFromIndex(node)
-	}
+	g.index.nodesByLabel.Replace(node, node.GetLabels(), labels)
 	node.labels = labels.Clone()
-	if g.index != nil {
-		g.index.addNodeToIndex(node)
-	}
 }
 
 func (g *OCGraph) SetNodeProperty(node *OCNode, key string, value interface{}) {
 	if node.Properties == nil {
 		node.Properties = make(Properties)
 	}
-	indexed := g.index.IsNodePropertyIndexed(key)
-	if indexed {
-		g.index.removeNodeFromIndex(node)
+	oldValue, exists := node.Properties[key]
+	nix := g.index.isNodePropertyIndexed(key)
+	if nix != nil && exists {
+		nix.remove(oldValue, node)
 	}
 	node.Properties[key] = value
-	if indexed {
-		g.index.addNodeToIndex(node)
+	if nix != nil {
+		nix.add(value, node)
 	}
 }
 
@@ -77,21 +83,38 @@ func (g *OCGraph) RemoveNodeProperty(node *OCNode, key string) {
 	if node.Properties == nil {
 		return
 	}
-	if g.index.IsNodePropertyIndexed(key) {
-		g.index.removeNodeFromIndex(node)
+	value, exists := node.Properties[key]
+	if !exists {
+		return
+	}
+	nix := g.index.isNodePropertyIndexed(key)
+	if nix != nil {
+		nix.remove(value, node)
 	}
 	delete(node.Properties, key)
 }
 
 func (g *OCGraph) DetachRemoveNode(node *OCNode) {
-	g.store.DetachRemoveNode(node)
-	if g.index != nil {
-		g.index.removeNodeFromIndex(node)
-	}
+	g.DetachNode(node)
+	g.allNodes.Remove(node)
+	g.index.removeNodeFromIndex(node)
 }
 
 func (g *OCGraph) DetachNode(node *OCNode) {
-	g.store.DetachNode(node)
+	for _, e := range EdgeSlice(node.incoming.Iterator()) {
+		edge := e.(*OCEdge)
+		g.disconnect(edge)
+		g.allEdges.Remove(edge)
+		g.index.removeEdgeFromIndex(edge)
+	}
+	node.incoming.Clear()
+	for _, e := range EdgeSlice(node.outgoing.Iterator()) {
+		edge := e.(*OCEdge)
+		g.disconnect(edge)
+		g.allEdges.Remove(edge)
+		g.index.removeEdgeFromIndex(edge)
+	}
+	node.outgoing.Clear()
 }
 
 func (g *OCGraph) NewEdge(from, to Node, label string, properties map[string]interface{}) Edge {
@@ -108,17 +131,46 @@ func (g *OCGraph) NewEdge(from, to Node, label string, properties map[string]int
 		to:         oto,
 		label:      label,
 		Properties: Properties(properties),
+		id:         g.idBase,
 	}
-	g.store.AddEdge(newEdge)
+	g.idBase++
+	g.allEdges.Add(newEdge)
+	g.connect(newEdge)
+	g.index.addEdgeToIndex(newEdge)
+	return newEdge
+}
+
+func (g *OCGraph) cloneEdge(from, to Node, edge *OCEdge, cloneProperty func(string, interface{}) interface{}) *OCEdge {
+	ofrom := from.(*OCNode)
+	oto := to.(*OCNode)
+	if ofrom.graph != g {
+		panic("from node is not in graph")
+	}
+	if oto.graph != g {
+		panic("to node is not in graph")
+	}
+	newEdge := &OCEdge{
+		from:       ofrom,
+		to:         oto,
+		label:      edge.label,
+		Properties: edge.Properties.clone(cloneProperty),
+		id:         g.idBase,
+	}
+	g.idBase++
+	g.allEdges.Add(newEdge)
+	g.connect(newEdge)
+	g.index.addEdgeToIndex(newEdge)
 	return newEdge
 }
 
 func (g *OCGraph) connect(edge *OCEdge) {
-	g.store.connect(edge)
+	edge.to.incoming.Add(edge)
+	edge.from.outgoing.Add(edge)
 }
 
 func (g *OCGraph) disconnect(edge *OCEdge) {
-	g.store.disconnect(edge)
+	edge.to.incoming.Remove(edge)
+	edge.from.outgoing.Remove(edge)
 }
 
 func (g *OCGraph) SetEdgeLabel(edge *OCEdge, label string) {
@@ -128,20 +180,22 @@ func (g *OCGraph) SetEdgeLabel(edge *OCEdge, label string) {
 }
 
 func (g *OCGraph) RemoveEdge(edge *OCEdge) {
-	g.store.RemoveEdge(edge)
+	g.disconnect(edge)
+	g.allEdges.Remove(edge)
 }
 
 func (g *OCGraph) SetEdgeProperty(edge *OCEdge, key string, value interface{}) {
 	if edge.Properties == nil {
 		edge.Properties = make(Properties)
 	}
-	indexed := g.index.IsEdgePropertyIndexed(key)
-	if indexed {
-		g.index.removeEdgeFromIndex(edge)
+	oldValue, exists := edge.Properties[key]
+	nix := g.index.isEdgePropertyIndexed(key)
+	if nix != nil && exists {
+		nix.remove(oldValue, edge)
 	}
 	edge.Properties[key] = value
-	if indexed {
-		g.index.addEdgeToIndex(edge)
+	if nix != nil {
+		nix.add(value, edge)
 	}
 }
 
@@ -149,22 +203,27 @@ func (g *OCGraph) RemoveEdgeProperty(edge *OCEdge, key string) {
 	if edge.Properties == nil {
 		return
 	}
-	if g.index.IsEdgePropertyIndexed(key) {
-		g.index.removeEdgeFromIndex(edge)
+	oldValue, exists := edge.Properties[key]
+	if !exists {
+		return
+	}
+	nix := g.index.isEdgePropertyIndexed(key)
+	if nix != nil {
+		nix.remove(oldValue, edge)
 	}
 	delete(edge.Properties, key)
 }
 
 func (g *OCGraph) NumNodes() int {
-	return g.store.NumNodes()
+	return g.allNodes.Len()
 }
 
 func (g *OCGraph) NumEdges() int {
-	return g.store.NumEdges()
+	return g.allEdges.Len()
 }
 
 func (g *OCGraph) GetNodes() NodeIterator {
-	return g.store.GetNodes()
+	return g.allNodes.Iterator()
 }
 
 func (g *OCGraph) GetNodesWithAllLabels(labels StringSet) NodeIterator {
@@ -172,11 +231,11 @@ func (g *OCGraph) GetNodesWithAllLabels(labels StringSet) NodeIterator {
 }
 
 func (g *OCGraph) GetEdges() EdgeIterator {
-	return g.store.GetEdges()
+	return g.allEdges.Iterator()
 }
 
 func (g *OCGraph) GetEdgesWithAnyLabel(set StringSet) EdgeIterator {
-	return g.store.GetEdgesWithAnyLabel(set)
+	return g.allEdges.IteratorAnyLabel(set)
 }
 
 // FindNodes returns an iterator that will iterate through all the

@@ -22,8 +22,10 @@ type OCEdge struct {
 	from, to *OCNode
 	label    string
 	Properties
+	id int
 }
 
+func (edge *OCEdge) GetID() int       { return edge.id }
 func (edge *OCEdge) GetGraph() Graph  { return edge.from.graph }
 func (edge *OCEdge) GetLabel() string { return edge.label }
 func (edge *OCEdge) GetFrom() Node    { return edge.from }

@@ -167,6 +167,50 @@ type NodeMap struct {
 	nolabels FastSet
 }
 
+func (nm *NodeMap) Replace(node *OCNode, oldLabels, newLabels StringSet) {
+	if nm.m == nil {
+		nm.m = linkedhashmap.New()
+	}
+	if len(oldLabels) == 0 {
+		if len(newLabels) == 0 {
+			return
+		}
+		nm.nolabels.Remove(node)
+	}
+	if len(newLabels) == 0 {
+		nm.nolabels.Add(node)
+		return
+	}
+	var set *FastSet
+	// Process removed labels
+	for label := range oldLabels {
+		if !newLabels.Has(label) {
+			v, found := nm.m.Get(label)
+			if !found {
+				continue
+			}
+			set = v.(*FastSet)
+			set.Remove(node)
+			if set.Len() == 0 {
+				nm.m.Remove(label)
+			}
+		}
+	}
+	// Process added labels
+	for label := range newLabels {
+		if !oldLabels.Has(label) {
+			v, found := nm.m.Get(label)
+			if !found {
+				set = &FastSet{}
+				nm.m.Put(label, set)
+			} else {
+				set = v.(*FastSet)
+			}
+			set.Add(node)
+		}
+	}
+}
+
 func (nm *NodeMap) Add(node *OCNode) {
 	if nm.m == nil {
 		nm.m = linkedhashmap.New()

@@ -110,20 +110,18 @@ func (g *graphIndex) NodePropertyIndex(propertyName string, graph Graph) {
 	}
 }
 
-func (g *graphIndex) IsNodePropertyIndexed(propertyName string) bool {
+func (g *graphIndex) isNodePropertyIndexed(propertyName string) *setTree {
 	if g == nil || g.nodeProperties == nil {
-		return false
+		return nil
 	}
-	_, indexed := g.nodeProperties[propertyName]
-	return indexed
+	return g.nodeProperties[propertyName]
 }
 
-func (g *graphIndex) IsEdgePropertyIndexed(propertyName string) bool {
+func (g *graphIndex) isEdgePropertyIndexed(propertyName string) *setTree {
 	if g == nil || g.edgeProperties == nil {
-		return false
+		return nil
 	}
-	_, indexed := g.edgeProperties[propertyName]
-	return indexed
+	return g.edgeProperties[propertyName]
 }
 
 // GetIteratorForNodeProperty returns an iterator for the given

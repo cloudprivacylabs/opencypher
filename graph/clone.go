@@ -14,37 +14,17 @@
 
 package graph
 
-func copyLabels(in StringSet) []string {
-	srcLabels := in.Slice()
-	labels := make([]string, len(srcLabels))
-	copy(labels, srcLabels)
-	return labels
-}
-
 type withProperties interface {
 	ForEachProperty(func(string, interface{}) bool) bool
 }
 
-func copyProperties(in withProperties, cloneProperty func(string, interface{}) interface{}) map[string]interface{} {
-	properties := make(map[string]interface{})
-	in.ForEachProperty(func(key string, value interface{}) bool {
-		properties[key] = cloneProperty(key, value)
-		return true
-	})
-	return properties
-}
-
 // CopyGraph copies source graph into target, using clonePropertyFunc to clone properties
 func CopyGraph(source, target Graph, clonePropertyFunc func(string, interface{}) interface{}) map[Node]Node {
+	targetoc := target.(*OCGraph)
 	return CopyGraphf(source, func(node Node, nodeMap map[Node]Node) Node {
-		return target.NewNode(copyLabels(node.GetLabels()), copyProperties(node, clonePropertyFunc))
+		return targetoc.cloneNode(node.(*OCNode), clonePropertyFunc)
 	}, func(edge Edge, nodeMap map[Node]Node) Edge {
-		properties := make(map[string]interface{})
-		edge.ForEachProperty(func(key string, value interface{}) bool {
-			properties[key] = clonePropertyFunc(key, value)
-			return true
-		})
-		return target.NewEdge(nodeMap[edge.GetFrom()], nodeMap[edge.GetTo()], edge.GetLabel(), properties)
+		return targetoc.cloneEdge(nodeMap[edge.GetFrom()], nodeMap[edge.GetTo()], edge.(*OCEdge), clonePropertyFunc)
 	})
 }
 
@@ -88,10 +68,10 @@ func CopySubgraph(sourceNode Node, target Graph, clonePropertyFunc func(string, 
 
 // CopyNode copies the sourceNode into target graph
 func CopyNode(sourceNode Node, target Graph, clonePropertyFunc func(string, interface{}) interface{}) Node {
-	return target.NewNode(copyLabels(sourceNode.GetLabels()), copyProperties(sourceNode, clonePropertyFunc))
+	return target.(*OCGraph).cloneNode(sourceNode.(*OCNode), clonePropertyFunc)
 }
 
 // CopyEdge copies the edge into graph
 func CopyEdge(edge Edge, target Graph, clonePropertyFunc func(string, interface{}) interface{}, nodeMap map[Node]Node) Edge {
-	return target.NewEdge(nodeMap[edge.GetFrom()], nodeMap[edge.GetTo()], edge.GetLabel(), copyProperties(edge, clonePropertyFunc))
+	return target.(*OCGraph).cloneEdge(nodeMap[edge.GetFrom()], nodeMap[edge.GetTo()], edge.(*OCEdge), clonePropertyFunc)
 }

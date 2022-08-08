@@ -211,3 +211,11 @@ func (p Properties) String() string {
 	}
 	return "{" + strings.Join(elements, " ") + "}"
 }
+
+func (p Properties) clone(cloneProperty func(string, interface{}) interface{}) Properties {
+	ret := make(Properties, len(p))
+	for k, v := range p {
+		ret[k] = cloneProperty(k, v)
+	}
+	return ret
+}
