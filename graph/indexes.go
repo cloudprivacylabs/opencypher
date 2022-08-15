@@ -23,7 +23,7 @@ type setTree struct {
 	tree *btree.Tree
 }
 
-func (s *setTree) add(key interface{}, item interface{}) {
+func (s *setTree) add(key interface{}, id int, item interface{}) {
 	if s.tree == nil {
 		s.tree = btree.NewWith(16, ComparePropertyValue)
 	}
@@ -33,10 +33,10 @@ func (s *setTree) add(key interface{}, item interface{}) {
 		s.tree.Put(key, v)
 	}
 	set := v.(*FastSet)
-	set.Add(item)
+	set.Add(id, item)
 }
 
-func (s setTree) remove(key interface{}, item interface{}) {
+func (s setTree) remove(key interface{}, id int, item interface{}) {
 	if s.tree == nil {
 		return
 	}
@@ -45,7 +45,7 @@ func (s setTree) remove(key interface{}, item interface{}) {
 		return
 	}
 	set := v.(*FastSet)
-	set.Remove(item)
+	set.Remove(id, item)
 	if set.Size() == 0 {
 		s.tree.Remove(key)
 	}
@@ -105,7 +105,7 @@ func (g *graphIndex) NodePropertyIndex(propertyName string, graph Graph) {
 		node := nodes.Node().(*OCNode)
 		value, ok := node.Properties[propertyName]
 		if ok {
-			index.add(value, node)
+			index.add(value, node.id, node)
 		}
 	}
 }
@@ -164,7 +164,7 @@ func (g *graphIndex) addNodeToIndex(node *OCNode) {
 		if !found {
 			continue
 		}
-		index.add(v, node)
+		index.add(v, node.id, node)
 	}
 }
 
@@ -176,7 +176,7 @@ func (g *graphIndex) removeNodeFromIndex(node *OCNode) {
 		if !found {
 			continue
 		}
-		index.remove(v, node)
+		index.remove(v, node.id, node)
 	}
 }
 
@@ -196,7 +196,7 @@ func (g *graphIndex) EdgePropertyIndex(propertyName string, graph Graph) {
 		edge := edges.Edge().(*OCEdge)
 		value, ok := edge.Properties[propertyName]
 		if ok {
-			index.add(value, edge)
+			index.add(value, edge.id, edge)
 		}
 	}
 }
@@ -207,7 +207,7 @@ func (g *graphIndex) addEdgeToIndex(edge *OCEdge) {
 		if !found {
 			continue
 		}
-		index.add(v, edge)
+		index.add(v, edge.id, edge)
 	}
 }
 
@@ -217,7 +217,7 @@ func (g *graphIndex) removeEdgeFromIndex(edge *OCEdge) {
 		if !found {
 			continue
 		}
-		index.remove(v, edge)
+		index.remove(v, edge.id, edge)
 	}
 }
 

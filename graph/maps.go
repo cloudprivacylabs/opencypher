@@ -43,7 +43,7 @@ func (em *EdgeMap) Add(edge *OCEdge) {
 		set = v.(*FastSet)
 	}
 	k := set.Size()
-	set.Add(edge)
+	set.Add(edge.id, edge)
 	if set.Size() > k {
 		em.n++
 	}
@@ -60,7 +60,7 @@ func (em EdgeMap) Remove(edge *OCEdge) {
 	}
 	set = v.(*FastSet)
 	k := set.Size()
-	set.Remove(edge)
+	set.Remove(edge.id, edge)
 	if set.Size() < k {
 		em.n--
 	}
@@ -175,10 +175,10 @@ func (nm *NodeMap) Replace(node *OCNode, oldLabels, newLabels StringSet) {
 		if len(newLabels) == 0 {
 			return
 		}
-		nm.nolabels.Remove(node)
+		nm.nolabels.Remove(node.id, node)
 	}
 	if len(newLabels) == 0 {
-		nm.nolabels.Add(node)
+		nm.nolabels.Add(node.id, node)
 		return
 	}
 	var set *FastSet
@@ -190,7 +190,7 @@ func (nm *NodeMap) Replace(node *OCNode, oldLabels, newLabels StringSet) {
 				continue
 			}
 			set = v.(*FastSet)
-			set.Remove(node)
+			set.Remove(node.id, node)
 			if set.Len() == 0 {
 				nm.m.Remove(label)
 			}
@@ -206,7 +206,7 @@ func (nm *NodeMap) Replace(node *OCNode, oldLabels, newLabels StringSet) {
 			} else {
 				set = v.(*FastSet)
 			}
-			set.Add(node)
+			set.Add(node.id, node)
 		}
 	}
 }
@@ -216,7 +216,7 @@ func (nm *NodeMap) Add(node *OCNode) {
 		nm.m = linkedhashmap.New()
 	}
 	if len(node.labels) == 0 {
-		nm.nolabels.Add(node)
+		nm.nolabels.Add(node.id, node)
 		return
 	}
 
@@ -229,7 +229,7 @@ func (nm *NodeMap) Add(node *OCNode) {
 		} else {
 			set = v.(*FastSet)
 		}
-		set.Add(node)
+		set.Add(node.id, node)
 	}
 }
 
@@ -238,7 +238,7 @@ func (nm NodeMap) Remove(node *OCNode) {
 		return
 	}
 	if len(node.labels) == 0 {
-		nm.nolabels.Remove(node)
+		nm.nolabels.Remove(node.id, node)
 		return
 	}
 	var set *FastSet
@@ -248,7 +248,7 @@ func (nm NodeMap) Remove(node *OCNode) {
 			continue
 		}
 		set = v.(*FastSet)
-		set.Remove(node)
+		set.Remove(node.id, node)
 		if set.Len() == 0 {
 			nm.m.Remove(label)
 		}

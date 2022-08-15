@@ -21,7 +21,7 @@ import (
 // A FastSet is a set of objects with constant-time
 // insertion/deletion, with iterator support
 type FastSet struct {
-	m map[interface{}]*list.Element
+	m map[int]*list.Element
 	l *list.List
 }
 
@@ -32,36 +32,36 @@ func NewFastSet() *FastSet {
 func (f FastSet) Len() int  { return len(f.m) }
 func (f FastSet) Size() int { return len(f.m) }
 
-func (f *FastSet) Add(item interface{}) {
+func (f *FastSet) Add(id int, item interface{}) {
 	if f.m == nil {
-		f.m = make(map[interface{}]*list.Element)
+		f.m = make(map[int]*list.Element)
 		f.l = list.New()
 	}
-	_, exists := f.m[item]
+	_, exists := f.m[id]
 	if exists {
 		return
 	}
 	el := f.l.PushBack(item)
-	f.m[item] = el
+	f.m[id] = el
 }
 
-func (f *FastSet) Remove(item interface{}) {
+func (f *FastSet) Remove(id int, item interface{}) {
 	if f.m == nil {
 		return
 	}
-	el := f.m[item]
+	el := f.m[id]
 	if el == nil {
 		return
 	}
-	delete(f.m, item)
+	delete(f.m, id)
 	f.l.Remove(el)
 }
 
-func (f FastSet) Has(item interface{}) bool {
+func (f FastSet) Has(id int) bool {
 	if f.m == nil {
 		return false
 	}
-	_, exists := f.m[item]
+	_, exists := f.m[id]
 	return exists
 }
 
@@ -77,15 +77,15 @@ type NodeSet struct {
 }
 
 func (set *NodeSet) Add(node *OCNode) {
-	set.set.Add(node)
+	set.set.Add(node.id, node)
 }
 
 func (set NodeSet) Remove(node *OCNode) {
-	set.set.Remove(node)
+	set.set.Remove(node.id, node)
 }
 
 func (set NodeSet) Has(node *OCNode) bool {
-	return set.set.Has(node)
+	return set.set.Has(node.id)
 }
 
 func (set NodeSet) Len() int {
@@ -107,11 +107,11 @@ type EdgeSet struct {
 }
 
 func (set *EdgeSet) Add(edge *OCEdge) {
-	set.set.Add(edge)
+	set.set.Add(edge.id, edge)
 }
 
 func (set EdgeSet) Remove(edge *OCEdge) {
-	set.set.Remove(edge)
+	set.set.Remove(edge.id, edge)
 }
 
 func (set EdgeSet) Len() int {

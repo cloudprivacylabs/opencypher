@@ -71,11 +71,11 @@ func (g *OCGraph) SetNodeProperty(node *OCNode, key string, value interface{}) {
 	oldValue, exists := node.Properties[key]
 	nix := g.index.isNodePropertyIndexed(key)
 	if nix != nil && exists {
-		nix.remove(oldValue, node)
+		nix.remove(oldValue, node.id, node)
 	}
 	node.Properties[key] = value
 	if nix != nil {
-		nix.add(value, node)
+		nix.add(value, node.id, node)
 	}
 }
 
@@ -89,7 +89,7 @@ func (g *OCGraph) RemoveNodeProperty(node *OCNode, key string) {
 	}
 	nix := g.index.isNodePropertyIndexed(key)
 	if nix != nil {
-		nix.remove(value, node)
+		nix.remove(value, node.id, node)
 	}
 	delete(node.Properties, key)
 }
@@ -191,11 +191,11 @@ func (g *OCGraph) SetEdgeProperty(edge *OCEdge, key string, value interface{}) {
 	oldValue, exists := edge.Properties[key]
 	nix := g.index.isEdgePropertyIndexed(key)
 	if nix != nil && exists {
-		nix.remove(oldValue, edge)
+		nix.remove(oldValue, edge.id, edge)
 	}
 	edge.Properties[key] = value
 	if nix != nil {
-		nix.add(value, edge)
+		nix.add(value, edge.id, edge)
 	}
 }
 
@@ -209,7 +209,7 @@ func (g *OCGraph) RemoveEdgeProperty(edge *OCEdge, key string) {
 	}
 	nix := g.index.isEdgePropertyIndexed(key)
 	if nix != nil {
-		nix.remove(oldValue, edge)
+		nix.remove(oldValue, edge.id, edge)
 	}
 	delete(edge.Properties, key)
 }

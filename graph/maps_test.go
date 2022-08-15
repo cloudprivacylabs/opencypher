@@ -9,9 +9,11 @@ func TestEdgeMap(t *testing.T) {
 	m := EdgeMap{}
 	labels := []string{"a", "b", "c", "d", "e", "f"}
 	data := make(map[string]struct{})
+	id := 0
 	for _, l := range labels {
 		for i := 0; i < 10; i++ {
-			edge := &OCEdge{label: l}
+			edge := &OCEdge{label: l, id: id}
+			id++
 			edge.Properties = make(Properties)
 			edge.Properties["index"] = i
 			m.Add(edge)
@@ -63,9 +65,11 @@ func TestNodeMap(t *testing.T) {
 	m := NodeMap{}
 	labels := [][]string{{"a"}, {"b", "c", "d"}, {"e", "f"}}
 	data := make(map[string]struct{})
+	id := 0
 	for _, l := range labels {
 		for i := 0; i < 10; i++ {
-			node := &OCNode{labels: NewStringSet(l...)}
+			node := &OCNode{labels: NewStringSet(l...), id: id}
+			id++
 			node.Properties = make(Properties)
 			node.Properties["index"] = i
 			m.Add(node)
