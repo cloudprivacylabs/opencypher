@@ -20,12 +20,11 @@ import (
 )
 
 type StringSet struct {
-	M     map[string]struct{}
-	owned bool
+	M map[string]struct{}
 }
 
 func NewStringSet(s ...string) StringSet {
-	ret := StringSet{M: make(map[string]struct{}), owned: true}
+	ret := StringSet{M: make(map[string]struct{}, len(s))}
 	for _, x := range s {
 		ret.M[x] = struct{}{}
 	}
@@ -82,7 +81,11 @@ func (set StringSet) HasAllSet(s StringSet) bool {
 }
 
 func (set *StringSet) Add(s ...string) *StringSet {
-	set.own()
+	m := set.M
+	set.M = make(map[string]struct{}, len(s)+len(m))
+	for x := range m {
+		set.M[x] = struct{}{}
+	}
 	for _, x := range s {
 		set.M[x] = struct{}{}
 	}
@@ -90,7 +93,11 @@ func (set *StringSet) Add(s ...string) *StringSet {
 }
 
 func (set *StringSet) AddSet(s StringSet) *StringSet {
-	set.own()
+	m := set.M
+	set.M = make(map[string]struct{}, len(s.M)+len(m))
+	for x := range s.M {
+		set.M[x] = struct{}{}
+	}
 	for x := range s.M {
 		set.M[x] = struct{}{}
 	}
@@ -98,9 +105,19 @@ func (set *StringSet) AddSet(s StringSet) *StringSet {
 }
 
 func (set *StringSet) Remove(s ...string) *StringSet {
-	set.own()
-	for _, x := range s {
-		delete(set.M, x)
+	m := set.M
+	set.M = make(map[string]struct{}, len(m))
+	for x := range m {
+		has := false
+		for _, y := range s {
+			if y == x {
+				has = true
+				break
+			}
+		}
+		if !has {
+			set.M[x] = struct{}{}
+		}
 	}
 	return set
 }
@@ -137,15 +154,3 @@ func (set *StringSet) UnmarshalJSON(in []byte) error {
 }
 
 func (set StringSet) Len() int { return len(set.M) }
-
-func (set *StringSet) own() {
-	if set.owned {
-		return
-	}
-	m := make(map[string]struct{}, len(set.M))
-	for x := range set.M {
-		m[x] = struct{}{}
-	}
-	set.M = m
-	set.owned = true
-}
