@@ -19,7 +19,7 @@ func TestPattern(t *testing.T) {
 	pat := Pattern{
 		{},
 		{Min: 1, Max: 1},
-		{Name: "nodes", Labels: nil, Properties: map[string]interface{}{"key": "value"}}}
+		{Name: "nodes", Labels: StringSet{}, Properties: map[string]interface{}{"key": "value"}}}
 	if _, i := pat.getFastestElement(graph, map[string]*PatternSymbol{}); i != 2 {
 		t.Errorf("Expecting 2, got %d", i)
 	}

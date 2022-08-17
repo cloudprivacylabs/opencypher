@@ -89,11 +89,15 @@ type graphIndex struct {
 	edgeProperties map[string]*setTree
 }
 
+func newGraphIndex() graphIndex {
+	return graphIndex{
+		nodeProperties: make(map[string]*setTree),
+		edgeProperties: make(map[string]*setTree),
+	}
+}
+
 // NodePropertyIndex sets up an index for the given node property
 func (g *graphIndex) NodePropertyIndex(propertyName string, graph Graph) {
-	if g.nodeProperties == nil {
-		g.nodeProperties = make(map[string]*setTree)
-	}
 	_, exists := g.nodeProperties[propertyName]
 	if exists {
 		return
@@ -111,16 +115,10 @@ func (g *graphIndex) NodePropertyIndex(propertyName string, graph Graph) {
 }
 
 func (g *graphIndex) isNodePropertyIndexed(propertyName string) *setTree {
-	if g == nil || g.nodeProperties == nil {
-		return nil
-	}
 	return g.nodeProperties[propertyName]
 }
 
 func (g *graphIndex) isEdgePropertyIndexed(propertyName string) *setTree {
-	if g == nil || g.edgeProperties == nil {
-		return nil
-	}
 	return g.edgeProperties[propertyName]
 }
 
@@ -182,9 +180,6 @@ func (g *graphIndex) removeNodeFromIndex(node *OCNode) {
 
 // EdgePropertyIndex sets up an index for the given edge property
 func (g *graphIndex) EdgePropertyIndex(propertyName string, graph Graph) {
-	if g.edgeProperties == nil {
-		g.edgeProperties = make(map[string]*setTree)
-	}
 	_, exists := g.edgeProperties[propertyName]
 	if exists {
 		return

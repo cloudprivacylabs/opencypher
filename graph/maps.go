@@ -171,19 +171,19 @@ func (nm *NodeMap) Replace(node *OCNode, oldLabels, newLabels StringSet) {
 	if nm.m == nil {
 		nm.m = linkedhashmap.New()
 	}
-	if len(oldLabels) == 0 {
-		if len(newLabels) == 0 {
+	if oldLabels.Len() == 0 {
+		if newLabels.Len() == 0 {
 			return
 		}
 		nm.nolabels.Remove(node.id, node)
 	}
-	if len(newLabels) == 0 {
+	if newLabels.Len() == 0 {
 		nm.nolabels.Add(node.id, node)
 		return
 	}
 	var set *FastSet
 	// Process removed labels
-	for label := range oldLabels {
+	for label := range oldLabels.M {
 		if !newLabels.Has(label) {
 			v, found := nm.m.Get(label)
 			if !found {
@@ -197,7 +197,7 @@ func (nm *NodeMap) Replace(node *OCNode, oldLabels, newLabels StringSet) {
 		}
 	}
 	// Process added labels
-	for label := range newLabels {
+	for label := range newLabels.M {
 		if !oldLabels.Has(label) {
 			v, found := nm.m.Get(label)
 			if !found {
@@ -215,13 +215,13 @@ func (nm *NodeMap) Add(node *OCNode) {
 	if nm.m == nil {
 		nm.m = linkedhashmap.New()
 	}
-	if len(node.labels) == 0 {
+	if node.labels.Len() == 0 {
 		nm.nolabels.Add(node.id, node)
 		return
 	}
 
 	var set *FastSet
-	for label := range node.labels {
+	for label := range node.labels.M {
 		v, found := nm.m.Get(label)
 		if !found {
 			set = &FastSet{}
@@ -237,12 +237,12 @@ func (nm NodeMap) Remove(node *OCNode) {
 	if nm.m == nil {
 		return
 	}
-	if len(node.labels) == 0 {
+	if node.labels.Len() == 0 {
 		nm.nolabels.Remove(node.id, node)
 		return
 	}
 	var set *FastSet
-	for label := range node.labels {
+	for label := range node.labels.M {
 		v, found := nm.m.Get(label)
 		if !found {
 			continue
@@ -333,7 +333,7 @@ func (nm NodeMap) IteratorAllLabels(labels StringSet) NodeIterator {
 	}
 	// Find the smallest map element, iterate that
 	var minSet *FastSet
-	for label := range labels {
+	for label := range labels.M {
 		v, found := nm.m.Get(label)
 		if !found {
 			return &nodeIterator{&emptyIterator{}}

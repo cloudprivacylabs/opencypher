@@ -114,7 +114,7 @@ func (p PatternItem) estimateNodeSize(gr Graph, symbols map[string]*PatternSymbo
 	g := gr.(*OCGraph)
 	max := -1
 	var ret Iterator
-	if len(p.Labels) > 0 {
+	if p.Labels.Len() > 0 {
 		itr := g.index.nodesByLabel.IteratorAllLabels(p.Labels)
 		if sz := itr.MaxSize(); sz != -1 {
 			max = sz
@@ -173,7 +173,7 @@ func (p PatternItem) estimateEdgeSize(gr Graph, symbols map[string]*PatternSymbo
 		return g.GetEdges(), -1
 	}
 
-	if len(p.Labels) > 0 {
+	if p.Labels.Len() > 0 {
 		itr := g.GetEdgesWithAnyLabel(p.Labels)
 		if sz := itr.MaxSize(); sz != -1 {
 			max = sz

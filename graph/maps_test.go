@@ -81,7 +81,7 @@ func TestNodeMap(t *testing.T) {
 	found := make(map[string]struct{})
 	for itr.Next() {
 		node := itr.Node().(*OCNode)
-		found[fmt.Sprintf("%d:%d", len(node.labels), node.Properties["index"])] = struct{}{}
+		found[fmt.Sprintf("%d:%d", node.labels.Len(), node.Properties["index"])] = struct{}{}
 	}
 	if len(found) != len(data) {
 		t.Errorf("found: %v", found)

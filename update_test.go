@@ -215,7 +215,7 @@ RETURN n.name, labels(n)`, NewEvalContext(g))
 	if err != nil {
 		t.Error(err)
 	}
-	if len(peter.GetLabels()) != 0 {
+	if peter.GetLabels().Len() != 0 {
 		t.Errorf("Has labels")
 	}
 }

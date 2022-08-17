@@ -341,7 +341,7 @@ func (m merge) getResults(ctx *EvalContext) (map[string]struct{}, ResultSet, err
 
 	unbound := make(map[string]struct{})
 	// Get unbound symbols of pattern.
-	for symbol := range pattern.GetSymbolNames() {
+	for symbol := range pattern.GetSymbolNames().M {
 		_, err := ctx.GetVar(symbol)
 		if err == nil {
 			continue

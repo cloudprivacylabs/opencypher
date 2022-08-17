@@ -194,10 +194,10 @@ func IsValueSame(v, v2 Value) bool {
 		if !ok {
 			return false
 		}
-		if len(val1) != len(val2) {
+		if val1.Len() != val2.Len() {
 			return false
 		}
-		for k := range val1 {
+		for k := range val1.M {
 			if !val2.Has(k) {
 				return false
 			}

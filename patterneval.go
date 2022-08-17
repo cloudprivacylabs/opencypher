@@ -112,7 +112,7 @@ func (match Match) GetResults(ctx *EvalContext) (ResultSet, error) {
 // pattern from the context, and puts them in a map
 func BuildPatternSymbols(ctx *EvalContext, pattern graph.Pattern) (map[string]*graph.PatternSymbol, error) {
 	symbols := make(map[string]*graph.PatternSymbol)
-	for symbol := range pattern.GetSymbolNames() {
+	for symbol := range pattern.GetSymbolNames().M {
 		// If a symbol is in the context, then get its value. Otherwise, it is a local symbol. Add to context
 		value, err := ctx.GetVar(symbol)
 		if err != nil {
@@ -223,10 +223,10 @@ func (rp relationshipPattern) getPattern(ctx *EvalContext) (graph.PatternItem, e
 
 func (rt *relationshipTypes) getPattern() graph.StringSet {
 	if rt == nil {
-		return nil
+		return graph.StringSet{}
 	}
 	if len(rt.rel) == 0 {
-		return nil
+		return graph.StringSet{}
 	}
 	ret := graph.NewStringSet()
 	for _, r := range rt.rel {
@@ -235,15 +235,15 @@ func (rt *relationshipTypes) getPattern() graph.StringSet {
 			ret.Add(s)
 		}
 	}
-	if len(ret) == 0 {
-		return nil
+	if ret.Len() == 0 {
+		return graph.StringSet{}
 	}
 	return ret
 }
 
 func (nl *NodeLabels) getPattern() graph.StringSet {
 	if nl == nil {
-		return nil
+		return graph.StringSet{}
 	}
 	ret := graph.NewStringSet()
 	for _, l := range *nl {
@@ -252,8 +252,8 @@ func (nl *NodeLabels) getPattern() graph.StringSet {
 			ret.Add(s)
 		}
 	}
-	if len(ret) == 0 {
-		return nil
+	if ret.Len() == 0 {
+		return graph.StringSet{}
 	}
 	return ret
 }

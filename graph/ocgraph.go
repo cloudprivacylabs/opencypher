@@ -23,7 +23,7 @@ type OCGraph struct {
 
 func NewOCGraph() *OCGraph {
 	return &OCGraph{
-		index: graphIndex{},
+		index: newGraphIndex(),
 	}
 }
 
@@ -243,13 +243,13 @@ func (g *OCGraph) GetEdgesWithAnyLabel(set StringSet) EdgeIterator {
 // allLabels is nil or empty, it does not look at the labels. If
 // properties is nil or empty, it does not look at the properties
 func (g *OCGraph) FindNodes(allLabels StringSet, properties map[string]interface{}) NodeIterator {
-	if len(allLabels) == 0 && len(properties) == 0 {
+	if allLabels.Len() == 0 && len(properties) == 0 {
 		// Return all nodes
 		return g.GetNodes()
 	}
 
 	var nodesByLabelItr NodeIterator
-	if len(allLabels) > 0 {
+	if allLabels.Len() > 0 {
 		nodesByLabelItr = g.index.nodesByLabel.IteratorAllLabels(allLabels)
 	}
 	// Select the iterator with minimum max size
@@ -361,13 +361,13 @@ func (g *OCGraph) GetEdgesWithProperty(property string) EdgeIterator {
 // labels. If properties is nil or empty, it does not look at the
 // properties
 func (g *OCGraph) FindEdges(labels StringSet, properties map[string]interface{}) EdgeIterator {
-	if len(labels) == 0 && len(properties) == 0 {
+	if labels.Len() == 0 && len(properties) == 0 {
 		// Return all edges
 		return g.GetEdges()
 	}
 
 	var edgesByLabelItr EdgeIterator
-	if len(labels) > 0 {
+	if labels.Len() > 0 {
 		edgesByLabelItr = g.GetEdgesWithAnyLabel(labels)
 	}
 	// Select the iterator with minimum max size
@@ -430,7 +430,7 @@ func (g *OCGraph) FindEdges(labels StringSet, properties map[string]interface{})
 func GetNodeFilterFunc(labels StringSet, properties map[string]interface{}) func(Node) bool {
 	return func(node Node) (cmp bool) {
 		onode := node.(*OCNode)
-		if len(labels) > 0 {
+		if labels.Len() > 0 {
 			if !onode.labels.HasAllSet(labels) {
 				return false
 			}
@@ -461,7 +461,7 @@ func GetNodeFilterFunc(labels StringSet, properties map[string]interface{}) func
 func GetEdgeFilterFunc(labels StringSet, properties map[string]interface{}) func(Edge) bool {
 	return func(edge Edge) (cmp bool) {
 		oedge := edge.(*OCEdge)
-		if len(labels) > 0 {
+		if labels.Len() > 0 {
 			if !labels.Has(oedge.label) {
 				return false
 			}

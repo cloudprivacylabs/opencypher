@@ -259,7 +259,7 @@ func (j JSON) Encode(g Graph, out io.Writer) error {
 			if _, err := out.Write([]byte(s)); err != nil {
 				return err
 			}
-			if len(node.labels) > 0 {
+			if node.labels.Len() > 0 {
 				data, _ := json.Marshal(node.labels)
 				if _, err := out.Write(comma); err != nil {
 					return err

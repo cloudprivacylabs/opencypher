@@ -63,12 +63,12 @@ func (node *OCNode) GetEdgesWithLabel(dir EdgeDir, label string) EdgeIterator {
 func (node *OCNode) GetEdgesWithAnyLabel(dir EdgeDir, labels StringSet) EdgeIterator {
 	switch dir {
 	case IncomingEdge:
-		if len(labels) == 0 {
+		if labels.Len() == 0 {
 			return node.incoming.Iterator()
 		}
 		return node.incoming.IteratorAnyLabel(labels)
 	case OutgoingEdge:
-		if len(labels) == 0 {
+		if labels.Len() == 0 {
 			return node.outgoing.Iterator()
 		}
 		return node.outgoing.IteratorAnyLabel(labels)
@@ -102,7 +102,7 @@ func (node *OCNode) Detach() {
 
 func (node OCNode) String() string {
 	labels := strings.Join(node.labels.Slice(), ":")
-	if len(node.labels) > 0 {
+	if node.labels.Len() > 0 {
 		labels = ":" + labels
 	}
 	return fmt.Sprintf("(%s %s)", labels, node.Properties)
