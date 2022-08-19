@@ -15,9 +15,16 @@ package graph
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"strconv"
 )
+
+type ErrInvalidGraph struct {
+	Msg string
+}
+
+func (e ErrInvalidGraph) Error() string { return "Invalid graph: " + e.Msg }
 
 // Interner is a string interface, that can be as simple as a
 // map[string]string, that is used to intern property keys
@@ -486,6 +493,19 @@ func (j JSON) Decode(g Graph, input *json.Decoder) error {
 					depth = 1
 				}
 			} else if tok == json.Delim('}') {
+				for _, edge := range edgeQueue {
+					from, ok := nodeMap[edge.From]
+					if !ok {
+						return ErrInvalidGraph{Msg: fmt.Sprintf("Invalid edge.from: %d", edge.From)}
+					}
+					to, ok := nodeMap[edge.To]
+					if !ok {
+						return ErrInvalidGraph{Msg: fmt.Sprintf("Invalid edge.to: %d", edge.To)}
+					}
+					if err := j.addEdge(g, from, to, edge.Label, edge.Properties); err != nil {
+						return err
+					}
+				}
 				return nil
 			}
 		} else {
