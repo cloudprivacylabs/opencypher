@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"unicode"
 
 	"github.com/cloudprivacylabs/opencypher/graph"
 )
@@ -220,4 +221,15 @@ func CartesianProduct(resultsets []ResultSet, all bool, filter func(map[string]V
 		}
 	}
 	return result
+}
+
+// IsNamedResult checks if the given name is a symbol name (i.e. it does not start with a number)
+func IsNamedResult(name string) bool {
+	for _, r := range name {
+		if unicode.IsDigit(r) {
+			return false
+		}
+		return true
+	}
+	return false
 }
