@@ -1,15 +1,16 @@
 [![GoDoc](https://godoc.org/github.com/cloudprivacylabs/opencypher?status.svg)](https://godoc.org/github.com/cloudprivacylabs/opencypher)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cloudprivacylabs/opencypher)](https://goreportcard.com/report/github.com/cloudprivacylabs/opencypher)
 [![Build Status](https://github.com/cloudprivacylabs/opencypher/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/cloudprivacylabs/opencypher/actions/workflows/CI.yml)
-# Embedded openCypher interpreter and labeled property graphs
+# Embedded openCypher interpreter
 
-This Go module contains a openCypher interpreter partial
-implementation and a labeled property graph implementation. The
-labeled property graph package can be used independently from the
-openCypher library.
+openCypher is a query language for labeled property graphs. This Go
+module contains an openCypher interpreter (partial) that works on the
+Go LPG implementation given in
+https://github.com/cloudprivacylabs/lpg.
 
-This Go module is part of the [Layered Schema
-Architecture](https://layeredschemas.org).
+More information on openCypher can be found here:
+
+https://opencypher.org/
 
 ## openCypher
 
@@ -27,11 +28,11 @@ import (
 	"fmt"
 
 	"github.com/cloudprivacylabs/opencypher"
-	"github.com/cloudprivacylabs/opencypher/graph"
+	"github.com/cloudprivacylabs/lpg"
 )
 
 func main() {
-	grph := graph.NewOCGraph()
+	grph := graph.NewGraph()
 	ectx := opencypher.NewEvalContext(grph)
 	_, err := opencypher.ParseAndEvaluate(`CREATE (n:Person), (m)`, ectx)
 	if err != nil {
@@ -55,7 +56,7 @@ See examples/context.
 ```
 func main() {
 	// Create an empty graph
-	grph := graph.NewOCGraph()
+	grph := graph.NewGraph()
 	// Evaluation context knows the graph we are working on
 	ectx := opencypher.NewEvalContext(grph)
 	// CREATE a path
@@ -68,7 +69,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	age, _ := v.Get().(opencypher.ResultSet).Rows[0]["1"].Get().(graph.Node).GetProperty("age")
+	age, _ := v.Get().(opencypher.ResultSet).Rows[0]["1"].Get().(*graph.Node).GetProperty("age")
 	fmt.Println(age) // This will print 34
 }
 ```
@@ -130,86 +131,23 @@ for _,row := range resultSet.Rows {
 }
 ```
 
-## Labeled Property Graph
-
-This labeled property graph package implements the openCypher model of
-labeled property graphs. A labeled property graph (LPG) contains nodes
-and directed edges between those nodes. Every node contains:
-
-  * Labels: Set of string tokens that usually identify the type of the
-    node,
-  * Properties: Key-value pairs.
-  
-Every edge contains:
-  * A label: String token that identifies a relationship, and
-  * Properties: Key-value pairs.
-  
-A graph indexes its nodes and edges, so finding a node, or a pattern
-usually does not involve iterating through all possibilities. 
-
-Create a graph using `NewOCGraph` function:
-
-```
-g := graph.NewOCGraph()
-// Create two nodes
-n1 := g.NewNode([]string{"label1"},map[string]interface{}{"prop": "value1" })
-n2 := g.NewNode([]string{"label2"},map[string]interface{}{"prop": "value2" })
-// Connect the two nodes with an edge
-edge:=g.NewEdge(n1,n2,"relatedTo",nil)
-```
-
-The LPG library uses an iterator model to address nodes and edges
-because the underlying algorithm to collect nodes and edges mathcing a
-certain criteria may depend on the existence of indexes. Both incoming
-and outgoing edges of nodes are accessible:
-
-```
-for edges:=n1.GetEdges(graph.OutgoingEdge); edges.Next(); {
-  edge:=edges.Edge()
-  // edge.GetTo() and edge.GetFrom() are the adjacent nodes
-}
-```
+The return type of `Value.Get` is one of the following:
+  * int
+  * float64
+  * bool
+  * string
+  * neo4j.Duration
+  * neo4j.Date
+  * neo4j.LocalDateTime
+  * neo4j.LocalTime
+  * []Value
+  * map[string]Value
+  * lpg.StringSet
+  * *Node
+  * []*Edge
+  * lpg.ResultSet
 
 
-The graph indexes nodes by label, so access to nodes using labels is
-fast. You can add additional indexes on properties:
-
-```
-g := graph.NewOCGraph()
-// Index all nodes with property 'prop'
-g.AddNodePropertyIndex("prop")
-
-// This access should be fast
-nodes := g.GetNodesWithProperty("prop")
-
-// This will go through all nodes
-slowNodes:= g.GetNodesWithProperty("propWithoutIndex")
-```
-
-Graph library supports searching patterns. The following example
-searches for the pattern that match 
-
-```
-(:label1) -[]->({prop:value})`
-```
-
-and returns the head nodes for every matching path:
-
-```
-pattern := graph.Pattern{ 
- // Node containing label 'label1'
- {
-   Labels: graph.NewStringSet("label1"),
- },
- // Edge of length 1
- {
-   Min: 1, 
-   Max: 1,
- },
- // Node with property prop=value
- {
-   Properties: map[string]interface{} {"prop":"value"},
- }}
-nodes, err:=pattern.FindNodes(g,nil)
-```
+This Go module is part of the [Layered Schema
+Architecture](https://layeredschemas.org).
 
