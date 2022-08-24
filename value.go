@@ -6,7 +6,7 @@ import (
 
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 
-	"github.com/cloudprivacylabs/opencypher/graph"
+	"github.com/cloudprivacylabs/lpg"
 )
 
 // Value represents a computed value. Possible data types it can contain are:
@@ -24,9 +24,9 @@ import (
 //  composites:
 //    []Value
 //    map[string]Value
-//    graph.StringSet
-//    Node
-//    []Edge
+//    lpg.StringSet
+//    *Node
+//    []*Edge
 //    ResultSet
 
 type Value interface {
@@ -130,15 +130,15 @@ func ValueOf(in interface{}) Value {
 		return RValue{Value: v}
 	case neo4j.LocalTime:
 		return RValue{Value: v}
-	case graph.Node:
+	case *lpg.Node:
 		return RValue{Value: v}
-	case []graph.Edge:
+	case []*lpg.Edge:
 		return RValue{Value: v}
 	case []Value:
 		return RValue{Value: v}
 	case map[string]Value:
 		return RValue{Value: v}
-	case graph.StringSet:
+	case lpg.StringSet:
 		return RValue{Value: v}
 	}
 	panic(fmt.Sprintf("Invalid value: %v %T", in, in))
@@ -189,8 +189,8 @@ func IsValueSame(v, v2 Value) bool {
 		}
 		return true
 
-	case graph.StringSet:
-		val2, ok := v2.Get().(graph.StringSet)
+	case lpg.StringSet:
+		val2, ok := v2.Get().(lpg.StringSet)
 		if !ok {
 			return false
 		}
@@ -204,15 +204,15 @@ func IsValueSame(v, v2 Value) bool {
 		}
 		return true
 
-	case graph.Node:
-		val2, ok := v2.Get().(graph.Node)
+	case *lpg.Node:
+		val2, ok := v2.Get().(*lpg.Node)
 		if !ok {
 			return false
 		}
 		return val1 == val2
 
-	case []graph.Edge:
-		val2, ok := v2.Get().([]graph.Edge)
+	case []*lpg.Edge:
+		val2, ok := v2.Get().([]*lpg.Edge)
 		if !ok {
 			return false
 		}

@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
+	"github.com/cloudprivacylabs/lpg"
 	"github.com/cloudprivacylabs/opencypher"
-	"github.com/cloudprivacylabs/opencypher/graph"
 )
 
 // Evaluation context keeps variables defined in expressions. It can
@@ -12,7 +12,7 @@ import (
 
 func main() {
 	// Create an empty graph
-	grph := graph.NewOCGraph()
+	grph := lpg.NewGraph()
 	// Evaluation context knows the graph we are working on
 	ectx := opencypher.NewEvalContext(grph)
 	// CREATE a path
@@ -25,7 +25,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	age, _ := v.Get().(opencypher.ResultSet).Rows[0]["1"].Get().(graph.Node).GetProperty("age")
+	age, _ := v.Get().(opencypher.ResultSet).Rows[0]["1"].Get().(*lpg.Node).GetProperty("age")
 	fmt.Println(age) // This will print 34
 
 	// The context knows andy

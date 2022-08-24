@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cloudprivacylabs/opencypher/graph"
+	"github.com/cloudprivacylabs/lpg"
 )
 
 const (
@@ -227,7 +227,7 @@ func (pl propertyOrLabelsExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	}
 	val := RValue{Value: v.Get()}
 	if pl.nodeLabels != nil {
-		gobj, ok := val.Value.(graph.StringSet)
+		gobj, ok := val.Value.(lpg.StringSet)
 		if !ok {
 			return nil, ErrNotAStringSet
 		}
@@ -249,7 +249,7 @@ func (pl propertyOrLabelsExpression) Evaluate(ctx *EvalContext) (Value, error) {
 		}
 		wp, ok := val.Value.(withProperty)
 		if !ok {
-			if edges, ed := val.Value.([]graph.Edge); ed {
+			if edges, ed := val.Value.([]*lpg.Edge); ed {
 				if len(edges) == 1 {
 					wp = edges[0]
 					ok = true
@@ -527,7 +527,7 @@ func (pe propertyExpression) Evaluate(ctx *EvalContext) (Value, error) {
 		}
 		value := val.Get()
 		switch parent := value.(type) {
-		case graph.Node:
+		case *lpg.Node:
 			val = LValue{
 				getter: func() interface{} {
 					v, _ := parent.GetProperty(prop)

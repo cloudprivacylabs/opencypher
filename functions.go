@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cloudprivacylabs/opencypher/graph"
+	"github.com/cloudprivacylabs/lpg"
 )
 
 func mustInt(v Value, err error) (int, error) {
@@ -79,7 +79,7 @@ func labelsFunc(ctx *EvalContext, args []Evaluatable) (Value, error) {
 	if v.Get() == nil {
 		return RValue{}, nil
 	}
-	node, ok := v.Get().(graph.Node)
+	node, ok := v.Get().(*lpg.Node)
 	if !ok {
 		return nil, fmt.Errorf("Not a node")
 	}
@@ -101,11 +101,11 @@ func typeFunc(ctx *EvalContext, args []Evaluatable) (Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	edge, ok := v.Get().(graph.Edge)
+	edge, ok := v.Get().(*lpg.Edge)
 	if ok {
 		return RValue{Value: edge.GetLabel()}, nil
 	}
-	edges, ok := v.Get().([]graph.Edge)
+	edges, ok := v.Get().([]*lpg.Edge)
 	if !ok || len(edges) != 1 {
 		return nil, fmt.Errorf("Cannot determine type of %T", v.Get())
 	}

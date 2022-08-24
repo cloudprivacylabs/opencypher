@@ -3,13 +3,13 @@ package main
 import (
 	"fmt"
 
+	"github.com/cloudprivacylabs/lpg"
 	"github.com/cloudprivacylabs/opencypher"
-	"github.com/cloudprivacylabs/opencypher/graph"
 )
 
 func main() {
 	// Create an empty graph
-	grph := graph.NewOCGraph()
+	grph := lpg.NewGraph()
 	// Evaluation context knows the graph we are working on
 	ectx := opencypher.NewEvalContext(grph)
 	// CREATE two nodes, one of which is a Person
