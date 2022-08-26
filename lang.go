@@ -100,6 +100,7 @@ func (p PatternPart) FindRelative(this *lpg.Node) ([]*lpg.Node, error) {
 
 	resultAccumulator := matchResultAccumulator{
 		evalCtx: ctx,
+		result:  NewResultSet(),
 	}
 	err = pattern.Run(ctx.graph, symbols, &resultAccumulator)
 	if err != nil {

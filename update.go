@@ -336,7 +336,7 @@ func (rel relationshipPattern) Create(ctx *EvalContext, from, to *lpg.Node) (*lp
 func (m merge) getResults(ctx *EvalContext) (map[string]struct{}, ResultSet, error) {
 	pattern, err := m.pattern.getPattern(ctx)
 	if err != nil {
-		return nil, ResultSet{}, err
+		return nil, *NewResultSet(), err
 	}
 
 	unbound := make(map[string]struct{})
@@ -352,16 +352,17 @@ func (m merge) getResults(ctx *EvalContext) (map[string]struct{}, ResultSet, err
 
 	results := matchResultAccumulator{
 		evalCtx: ctx,
+		result:  NewResultSet(),
 	}
 	symbols, err := BuildPatternSymbols(ctx, pattern)
 	if err != nil {
-		return nil, ResultSet{}, err
+		return nil, *NewResultSet(), err
 	}
 	err = pattern.Run(ctx.graph, symbols, &results)
 	if err != nil {
-		return nil, ResultSet{}, err
+		return nil, *NewResultSet(), err
 	}
-	return unbound, results.result, nil
+	return unbound, *results.result, nil
 }
 
 func (m merge) resultsToCtx(ctx *EvalContext, results ResultSet) {
@@ -396,7 +397,7 @@ func (m merge) doMerge(ctx *EvalContext) (created bool, matched bool, result Res
 		for k, v := range vars {
 			row[k] = v
 		}
-		result = ResultSet{}
+		result = *NewResultSet()
 		result.Append(row)
 		created = true
 		return
@@ -420,7 +421,7 @@ func (m merge) processActions(ctx *EvalContext, created, matched bool, rs Result
 }
 
 func (m merge) Update(ctx *EvalContext, rs ResultSet) (Value, error) {
-	results := ResultSet{}
+	results := *NewResultSet()
 	for _, row := range rs.Rows {
 		subctx := ctx.SubContext()
 		subctx.SetVars(row)
@@ -457,7 +458,7 @@ func (m merge) TopLevelUpdate(ctx *EvalContext) (Value, error) {
 	if err := m.processActions(ctx, created, matched, rs); err != nil {
 		return nil, err
 	}
-	results := ResultSet{}
+	results := *NewResultSet()
 	for _, r := range rs.Rows {
 		newRow := make(map[string]Value)
 		for k, v := range r {

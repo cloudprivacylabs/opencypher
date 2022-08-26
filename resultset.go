@@ -22,6 +22,13 @@ type ResultSet struct {
 	Rows []map[string]Value
 }
 
+func NewResultSet() *ResultSet {
+	return &ResultSet{
+		Nodes: *lpg.NewNodeSet(),
+		Edges: *lpg.NewEdgeSet(),
+	}
+}
+
 func isCompatibleValue(v1, v2 Value) bool {
 	if v1.Get() == nil {
 		if v2.Get() == nil {
@@ -186,14 +193,14 @@ func (r ResultSet) CartesianProduct(f func(map[string]Value) bool) bool {
 // CartesianProuduct builds the product of all the resultsets
 func CartesianProduct(resultsets []ResultSet, all bool, filter func(map[string]Value) bool) ResultSet {
 	ctr := make([]int, len(resultsets))
-	result := ResultSet{}
+	result := *NewResultSet()
 	for {
 		data := make(map[string]Value)
 		for i := range ctr {
 			var row map[string]Value
 			if ctr[i] >= len(resultsets[i].Rows) {
 				if !all {
-					return ResultSet{}
+					return *NewResultSet()
 				}
 			} else {
 				row = resultsets[i].Rows[ctr[i]]

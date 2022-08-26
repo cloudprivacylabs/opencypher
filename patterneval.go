@@ -36,7 +36,7 @@ func (properties Properties) AsLiteral(ctx *EvalContext) ([]mapKeyValue, error) 
 
 type matchResultAccumulator struct {
 	evalCtx *EvalContext
-	result  ResultSet
+	result  *ResultSet
 	err     error
 }
 
@@ -58,7 +58,7 @@ func (match Match) GetResults(ctx *EvalContext) (ResultSet, error) {
 	for i := range match.Pattern.Parts {
 		p, err := match.Pattern.Parts[i].getPattern(ctx)
 		if err != nil {
-			return ResultSet{}, err
+			return *NewResultSet(), err
 		}
 		patterns = append(patterns, p)
 	}
@@ -67,20 +67,21 @@ func (match Match) GetResults(ctx *EvalContext) (ResultSet, error) {
 	results := make([]matchResultAccumulator, len(patterns))
 	for i := range patterns {
 		results[i].evalCtx = newContext
+		results[i].result = NewResultSet()
 		symbols, err := BuildPatternSymbols(ctx, patterns[i])
 		if err != nil {
-			return ResultSet{}, err
+			return *NewResultSet(), err
 		}
 
 		err = patterns[i].Run(ctx.graph, symbols, &results[i])
 		if err != nil {
-			return ResultSet{}, err
+			return *NewResultSet(), err
 		}
 	}
 
 	resultSets := make([]ResultSet, 0, len(patterns))
 	for _, r := range results {
-		resultSets = append(resultSets, r.result)
+		resultSets = append(resultSets, *r.result)
 	}
 	var err error
 	// Build resultset from results

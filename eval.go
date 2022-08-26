@@ -393,7 +393,7 @@ func (query regularQuery) Evaluate(ctx *EvalContext) (Value, error) {
 }
 
 func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
-	ret := ResultSet{}
+	ret := *NewResultSet()
 	skip := -1
 	limit := -1
 	if query.ret != nil {
@@ -428,7 +428,7 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		}
 		return nil
 	}
-	results := ResultSet{}
+	results := *NewResultSet()
 	if len(query.read) > 0 {
 		for _, r := range query.read {
 			rs, err := r.GetResults(ctx)
@@ -446,7 +446,7 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 			results = v.Get().(ResultSet)
 		}
 		if query.ret == nil {
-			return RValue{Value: ResultSet{}}, nil
+			return RValue{Value: *NewResultSet()}, nil
 		}
 		err := project(results.Rows)
 		if err != nil {
@@ -465,7 +465,7 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		}
 	}
 	if query.ret == nil {
-		return RValue{Value: ResultSet{}}, nil
+		return RValue{Value: *NewResultSet()}, nil
 	}
 
 	if len(results.Rows) > 0 {

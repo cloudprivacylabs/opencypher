@@ -24,12 +24,12 @@ func runTestMatch(t *testing.T, expr string, g *lpg.Graph) ResultSet {
 	ev, err := Parse(expr)
 	if err != nil {
 		t.Errorf("%s: %s", expr, err)
-		return ResultSet{}
+		return *NewResultSet()
 	}
 	value, err := ev.Evaluate(ctx)
 	if err != nil {
 		t.Errorf("%s: %s", expr, err)
-		return ResultSet{}
+		return *NewResultSet()
 	}
 
 	return value.Get().(ResultSet)
