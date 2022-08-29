@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
-	"github.com/cloudprivacylabs/opencypher/graph"
+	"github.com/cloudprivacylabs/lpg"
 	"github.com/cloudprivacylabs/opencypher/parser"
 )
 
@@ -85,7 +85,7 @@ func ParsePatternExpr(expr string) (PatternPart, error) {
 
 // FindRelative evaluates a pattern expression starting at the given
 // node. It may return zero or more nodes reached from the node
-func (p PatternPart) FindRelative(this graph.Node) ([]graph.Node, error) {
+func (p PatternPart) FindRelative(this *lpg.Node) ([]*lpg.Node, error) {
 	ctx := NewEvalContext(this.GetGraph())
 	ctx.SetVar("this", RValue{Value: this})
 	pattern, err := p.getPattern(ctx)
@@ -100,19 +100,20 @@ func (p PatternPart) FindRelative(this graph.Node) ([]graph.Node, error) {
 
 	resultAccumulator := matchResultAccumulator{
 		evalCtx: ctx,
+		result:  NewResultSet(),
 	}
 	err = pattern.Run(ctx.graph, symbols, &resultAccumulator)
 	if err != nil {
 		return nil, err
 	}
 
-	ret := make([]graph.Node, 0, len(resultAccumulator.result.Rows))
+	ret := make([]*lpg.Node, 0, len(resultAccumulator.result.Rows))
 	for _, row := range resultAccumulator.result.Rows {
 		t, ok := row["target"]
 		if !ok {
 			continue
 		}
-		if n, ok := t.Get().(graph.Node); ok {
+		if n, ok := t.Get().(*lpg.Node); ok {
 			ret = append(ret, n)
 		}
 	}

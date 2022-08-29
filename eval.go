@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cloudprivacylabs/opencypher/graph"
+	"github.com/cloudprivacylabs/lpg"
 )
 
 const (
@@ -227,7 +227,7 @@ func (pl propertyOrLabelsExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	}
 	val := RValue{Value: v.Get()}
 	if pl.nodeLabels != nil {
-		gobj, ok := val.Value.(graph.StringSet)
+		gobj, ok := val.Value.(lpg.StringSet)
 		if !ok {
 			return nil, ErrNotAStringSet
 		}
@@ -249,7 +249,7 @@ func (pl propertyOrLabelsExpression) Evaluate(ctx *EvalContext) (Value, error) {
 		}
 		wp, ok := val.Value.(withProperty)
 		if !ok {
-			if edges, ed := val.Value.([]graph.Edge); ed {
+			if edges, ed := val.Value.([]*lpg.Edge); ed {
 				if len(edges) == 1 {
 					wp = edges[0]
 					ok = true
@@ -393,7 +393,7 @@ func (query regularQuery) Evaluate(ctx *EvalContext) (Value, error) {
 }
 
 func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
-	ret := ResultSet{}
+	ret := *NewResultSet()
 	skip := -1
 	limit := -1
 	if query.ret != nil {
@@ -428,7 +428,7 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		}
 		return nil
 	}
-	results := ResultSet{}
+	results := *NewResultSet()
 	if len(query.read) > 0 {
 		for _, r := range query.read {
 			rs, err := r.GetResults(ctx)
@@ -446,7 +446,7 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 			results = v.Get().(ResultSet)
 		}
 		if query.ret == nil {
-			return RValue{Value: ResultSet{}}, nil
+			return RValue{Value: *NewResultSet()}, nil
 		}
 		err := project(results.Rows)
 		if err != nil {
@@ -465,7 +465,7 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		}
 	}
 	if query.ret == nil {
-		return RValue{Value: ResultSet{}}, nil
+		return RValue{Value: *NewResultSet()}, nil
 	}
 
 	if len(results.Rows) > 0 {
@@ -527,7 +527,7 @@ func (pe propertyExpression) Evaluate(ctx *EvalContext) (Value, error) {
 		}
 		value := val.Get()
 		switch parent := value.(type) {
-		case graph.Node:
+		case *lpg.Node:
 			val = LValue{
 				getter: func() interface{} {
 					v, _ := parent.GetProperty(prop)

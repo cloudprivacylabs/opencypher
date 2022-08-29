@@ -1,7 +1,7 @@
 package opencypher
 
 import (
-	"github.com/cloudprivacylabs/opencypher/graph"
+	"github.com/cloudprivacylabs/lpg"
 )
 
 type ErrInvalidValueReferenceInPattern struct {
@@ -36,11 +36,11 @@ func (properties Properties) AsLiteral(ctx *EvalContext) ([]mapKeyValue, error) 
 
 type matchResultAccumulator struct {
 	evalCtx *EvalContext
-	result  ResultSet
+	result  *ResultSet
 	err     error
 }
 
-func (acc *matchResultAccumulator) StoreResult(ctx *graph.MatchContext, path interface{}, symbols map[string]interface{}) {
+func (acc *matchResultAccumulator) StoreResult(ctx *lpg.MatchContext, path interface{}, symbols map[string]interface{}) {
 	if acc.err != nil {
 		return
 	}
@@ -54,11 +54,11 @@ func (acc *matchResultAccumulator) StoreResult(ctx *graph.MatchContext, path int
 }
 
 func (match Match) GetResults(ctx *EvalContext) (ResultSet, error) {
-	patterns := make([]graph.Pattern, 0, len(match.Pattern.Parts))
+	patterns := make([]lpg.Pattern, 0, len(match.Pattern.Parts))
 	for i := range match.Pattern.Parts {
 		p, err := match.Pattern.Parts[i].getPattern(ctx)
 		if err != nil {
-			return ResultSet{}, err
+			return *NewResultSet(), err
 		}
 		patterns = append(patterns, p)
 	}
@@ -67,20 +67,21 @@ func (match Match) GetResults(ctx *EvalContext) (ResultSet, error) {
 	results := make([]matchResultAccumulator, len(patterns))
 	for i := range patterns {
 		results[i].evalCtx = newContext
+		results[i].result = NewResultSet()
 		symbols, err := BuildPatternSymbols(ctx, patterns[i])
 		if err != nil {
-			return ResultSet{}, err
+			return *NewResultSet(), err
 		}
 
 		err = patterns[i].Run(ctx.graph, symbols, &results[i])
 		if err != nil {
-			return ResultSet{}, err
+			return *NewResultSet(), err
 		}
 	}
 
 	resultSets := make([]ResultSet, 0, len(patterns))
 	for _, r := range results {
-		resultSets = append(resultSets, r.result)
+		resultSets = append(resultSets, *r.result)
 	}
 	var err error
 	// Build resultset from results
@@ -110,21 +111,21 @@ func (match Match) GetResults(ctx *EvalContext) (ResultSet, error) {
 
 // BuildPatternSymbols copies all the symbols referenced in the
 // pattern from the context, and puts them in a map
-func BuildPatternSymbols(ctx *EvalContext, pattern graph.Pattern) (map[string]*graph.PatternSymbol, error) {
-	symbols := make(map[string]*graph.PatternSymbol)
+func BuildPatternSymbols(ctx *EvalContext, pattern lpg.Pattern) (map[string]*lpg.PatternSymbol, error) {
+	symbols := make(map[string]*lpg.PatternSymbol)
 	for symbol := range pattern.GetSymbolNames().M {
 		// If a symbol is in the context, then get its value. Otherwise, it is a local symbol. Add to context
 		value, err := ctx.GetVar(symbol)
 		if err != nil {
 			continue
 		}
-		ps := &graph.PatternSymbol{}
+		ps := &lpg.PatternSymbol{}
 		// A variable with the same name exists
 		// Must be a Node, or []Edge
 		switch val := value.Get().(type) {
-		case graph.Node:
+		case *lpg.Node:
 			ps.AddNode(val)
-		case []graph.Edge:
+		case []*lpg.Edge:
 			ps.AddPath(val)
 		default:
 			return nil, ErrInvalidValueReferenceInPattern{Symbol: symbol}
@@ -134,8 +135,8 @@ func BuildPatternSymbols(ctx *EvalContext, pattern graph.Pattern) (map[string]*g
 	return symbols, nil
 }
 
-func (part PatternPart) getPattern(ctx *EvalContext) (graph.Pattern, error) {
-	pattern := make([]graph.PatternItem, 0, len(part.path)*2+1)
+func (part PatternPart) getPattern(ctx *EvalContext) (lpg.Pattern, error) {
+	pattern := make([]lpg.PatternItem, 0, len(part.path)*2+1)
 	np, err := part.start.getPattern(ctx)
 	if err != nil {
 		return nil, err
@@ -157,8 +158,8 @@ func (part PatternPart) getPattern(ctx *EvalContext) (graph.Pattern, error) {
 	return pattern, nil
 }
 
-func (np nodePattern) getPattern(ctx *EvalContext) (graph.PatternItem, error) {
-	ret := graph.PatternItem{}
+func (np nodePattern) getPattern(ctx *EvalContext) (lpg.PatternItem, error) {
+	ret := lpg.PatternItem{}
 	if np.variable != nil {
 		ret.Name = string(*np.variable)
 	}
@@ -166,7 +167,7 @@ func (np nodePattern) getPattern(ctx *EvalContext) (graph.PatternItem, error) {
 	var err error
 	props, err := np.properties.getPattern(ctx)
 	if err != nil {
-		return graph.PatternItem{}, err
+		return lpg.PatternItem{}, err
 	}
 	if len(props) > 0 {
 		ret.Properties = make(map[string]interface{})
@@ -177,8 +178,8 @@ func (np nodePattern) getPattern(ctx *EvalContext) (graph.PatternItem, error) {
 	return ret, nil
 }
 
-func (rp relationshipPattern) getPattern(ctx *EvalContext) (graph.PatternItem, error) {
-	ret := graph.PatternItem{}
+func (rp relationshipPattern) getPattern(ctx *EvalContext) (lpg.PatternItem, error) {
+	ret := lpg.PatternItem{}
 	if rp.variable != nil {
 		ret.Name = string(*rp.variable)
 	}
@@ -186,7 +187,7 @@ func (rp relationshipPattern) getPattern(ctx *EvalContext) (graph.PatternItem, e
 	if rp.rng != nil {
 		from, to, err := rp.rng.Evaluate(ctx)
 		if err != nil {
-			return graph.PatternItem{}, err
+			return lpg.PatternItem{}, err
 		}
 		if from != nil {
 			ret.Min = *from
@@ -210,7 +211,7 @@ func (rp relationshipPattern) getPattern(ctx *EvalContext) (graph.PatternItem, e
 	var err error
 	props, err := rp.properties.getPattern(ctx)
 	if err != nil {
-		return graph.PatternItem{}, err
+		return lpg.PatternItem{}, err
 	}
 	if len(props) > 0 {
 		ret.Properties = make(map[string]interface{})
@@ -221,14 +222,14 @@ func (rp relationshipPattern) getPattern(ctx *EvalContext) (graph.PatternItem, e
 	return ret, nil
 }
 
-func (rt *relationshipTypes) getPattern() graph.StringSet {
+func (rt *relationshipTypes) getPattern() lpg.StringSet {
 	if rt == nil {
-		return graph.StringSet{}
+		return lpg.StringSet{}
 	}
 	if len(rt.rel) == 0 {
-		return graph.StringSet{}
+		return lpg.StringSet{}
 	}
-	ret := graph.NewStringSet()
+	ret := lpg.NewStringSet()
 	for _, r := range rt.rel {
 		s := r.String()
 		if len(s) > 0 {
@@ -236,16 +237,16 @@ func (rt *relationshipTypes) getPattern() graph.StringSet {
 		}
 	}
 	if ret.Len() == 0 {
-		return graph.StringSet{}
+		return lpg.StringSet{}
 	}
 	return ret
 }
 
-func (nl *NodeLabels) getPattern() graph.StringSet {
+func (nl *NodeLabels) getPattern() lpg.StringSet {
 	if nl == nil {
-		return graph.StringSet{}
+		return lpg.StringSet{}
 	}
-	ret := graph.NewStringSet()
+	ret := lpg.NewStringSet()
 	for _, l := range *nl {
 		s := l.String()
 		if len(s) > 0 {
@@ -253,7 +254,7 @@ func (nl *NodeLabels) getPattern() graph.StringSet {
 		}
 	}
 	if ret.Len() == 0 {
-		return graph.StringSet{}
+		return lpg.StringSet{}
 	}
 	return ret
 }

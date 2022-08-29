@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"unicode"
 
-	"github.com/cloudprivacylabs/opencypher/graph"
+	"github.com/cloudprivacylabs/lpg"
 )
 
 var ErrRowsHaveDifferentSizes = errors.New("Rows have different sizes")
@@ -16,10 +16,17 @@ var ErrIncompatibleCells = errors.New("Incompatible result set cells")
 
 // ResultSet is a table of values
 type ResultSet struct {
-	Nodes graph.NodeSet
-	Edges graph.EdgeSet
+	Nodes lpg.NodeSet
+	Edges lpg.EdgeSet
 
 	Rows []map[string]Value
+}
+
+func NewResultSet() *ResultSet {
+	return &ResultSet{
+		Nodes: *lpg.NewNodeSet(),
+		Edges: *lpg.NewEdgeSet(),
+	}
 }
 
 func isCompatibleValue(v1, v2 Value) bool {
@@ -85,35 +92,35 @@ func (r *ResultSet) Append(row map[string]Value) error {
 	r.Rows = append(r.Rows, row)
 	for _, v := range row {
 		switch val := v.Get().(type) {
-		case graph.Node:
-			r.Nodes.Add(val.(*graph.OCNode))
-		case []graph.Edge:
+		case *lpg.Node:
+			r.Nodes.Add(val)
+		case []*lpg.Edge:
 			for _, edge := range val {
-				r.Edges.Add(edge.(*graph.OCEdge))
+				r.Edges.Add(edge)
 			}
-		case graph.Edge:
-			r.Edges.Add(val.(*graph.OCEdge))
+		case *lpg.Edge:
+			r.Edges.Add(val)
 		}
 	}
 	return nil
 }
 
-func (r *ResultSet) AddPath(node graph.Node, edges []graph.Edge) {
+func (r *ResultSet) AddPath(node *lpg.Node, edges []*lpg.Edge) {
 	if node != nil {
-		r.Nodes.Add(node.(*graph.OCNode))
+		r.Nodes.Add(node)
 	}
 	for _, e := range edges {
-		r.Edges.Add(e.(*graph.OCEdge))
+		r.Edges.Add(e)
 	}
 }
 
 func (r *ResultSet) Add(rs ResultSet) {
 	r.Rows = append(r.Rows, rs.Rows...)
 	for itr := rs.Nodes.Iterator(); itr.Next(); {
-		r.Nodes.Add(itr.Node().(*graph.OCNode))
+		r.Nodes.Add(itr.Node())
 	}
 	for itr := rs.Edges.Iterator(); itr.Next(); {
-		r.Edges.Add(itr.Edge().(*graph.OCEdge))
+		r.Edges.Add(itr.Edge())
 	}
 }
 
@@ -186,14 +193,14 @@ func (r ResultSet) CartesianProduct(f func(map[string]Value) bool) bool {
 // CartesianProuduct builds the product of all the resultsets
 func CartesianProduct(resultsets []ResultSet, all bool, filter func(map[string]Value) bool) ResultSet {
 	ctr := make([]int, len(resultsets))
-	result := ResultSet{}
+	result := *NewResultSet()
 	for {
 		data := make(map[string]Value)
 		for i := range ctr {
 			var row map[string]Value
 			if ctr[i] >= len(resultsets[i].Rows) {
 				if !all {
-					return ResultSet{}
+					return *NewResultSet()
 				}
 			} else {
 				row = resultsets[i].Rows[ctr[i]]
