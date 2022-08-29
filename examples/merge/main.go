@@ -3,15 +3,15 @@ package main
 import (
 	"fmt"
 
+	"github.com/cloudprivacylabs/lpg"
 	"github.com/cloudprivacylabs/opencypher"
-	"github.com/cloudprivacylabs/opencypher/graph"
 )
 
 // Examples are from: https://neo4j.com/docs/cypher-manual/current/clauses/merge/
 func main() {
 
-	getGraph := func() graph.Graph {
-		g := graph.NewOCGraph()
+	getGraph := func() *lpg.Graph {
+		g := lpg.NewGraph()
 		// Evaluation context knows the graph we are working on
 		ectx := opencypher.NewEvalContext(g)
 

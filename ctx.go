@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/cloudprivacylabs/opencypher/graph"
+	"github.com/cloudprivacylabs/lpg"
 )
 
 type ErrUnknownParameter struct {
@@ -20,10 +20,10 @@ type EvalContext struct {
 	funcMap    map[string]Function
 	variables  map[string]Value
 	parameters map[string]Value
-	graph      graph.Graph
+	graph      *lpg.Graph
 }
 
-func NewEvalContext(graph graph.Graph) *EvalContext {
+func NewEvalContext(graph *lpg.Graph) *EvalContext {
 	return &EvalContext{
 		funcMap:    globalFuncs,
 		variables:  make(map[string]Value),

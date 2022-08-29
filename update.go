@@ -3,7 +3,7 @@ package opencypher
 import (
 	"fmt"
 
-	"github.com/cloudprivacylabs/opencypher/graph"
+	"github.com/cloudprivacylabs/lpg"
 )
 
 func (s *set) Update(ctx *EvalContext, result ResultSet) (Value, error) {
@@ -60,7 +60,7 @@ func (s *setItem) update(ctx *EvalContext, data map[string]Value, result ResultS
 	getSourceProps := func() (map[string]interface{}, error) {
 		sourceProps := make(map[string]interface{})
 		exprValue := exprResult.Get()
-		if node, ok := exprValue.(graph.Node); ok {
+		if node, ok := exprValue.(*lpg.Node); ok {
 			node.ForEachProperty(func(key string, value interface{}) bool {
 				sourceProps[key] = value
 				return true
@@ -77,7 +77,7 @@ func (s *setItem) update(ctx *EvalContext, data map[string]Value, result ResultS
 	switch s.op {
 	case "=":
 		switch v := lvalue.Get().(type) {
-		case graph.Node:
+		case *lpg.Node:
 			sourceProps, err := getSourceProps()
 			if err != nil {
 				return err
@@ -101,7 +101,7 @@ func (s *setItem) update(ctx *EvalContext, data map[string]Value, result ResultS
 		if err != nil {
 			return err
 		}
-		node, ok := lvalue.Get().(graph.Node)
+		node, ok := lvalue.Get().(*lpg.Node)
 		if !ok {
 			return ErrInvalidAssignment(fmt.Sprintf("%T: %v", lvalue.Get(), lvalue.Get()))
 		}
@@ -113,7 +113,7 @@ func (s *setItem) update(ctx *EvalContext, data map[string]Value, result ResultS
 			node.SetProperty(k, v)
 		}
 	default: // NodeLabels
-		node, ok := lvalue.Get().(graph.Node)
+		node, ok := lvalue.Get().(*lpg.Node)
 		if !ok {
 			return ErrInvalidAssignment("Not a node")
 		}
@@ -143,8 +143,8 @@ func (d deleteClause) Update(ctx *EvalContext, result ResultSet) (Value, error) 
 				continue
 			}
 			switch item := v.Get().(type) {
-			case graph.Node:
-				if item.GetEdges(graph.OutgoingEdge).Next() || item.GetEdges(graph.IncomingEdge).Next() {
+			case *lpg.Node:
+				if item.GetEdges(lpg.OutgoingEdge).Next() || item.GetEdges(lpg.IncomingEdge).Next() {
 					// Must have detach
 					if !d.detach {
 						return nil, fmt.Errorf("Cannot delete attached node")
@@ -152,7 +152,7 @@ func (d deleteClause) Update(ctx *EvalContext, result ResultSet) (Value, error) 
 				}
 				item.DetachAndRemove()
 
-			case []graph.Edge:
+			case []*lpg.Edge:
 				for _, e := range item {
 					e.Remove()
 				}
@@ -190,7 +190,7 @@ func (r remove) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 			if v.Get() == nil {
 				continue
 			}
-			node, ok := v.Get().(graph.Node)
+			node, ok := v.Get().(*lpg.Node)
 			if !ok {
 				return nil, fmt.Errorf("Expecting a node in remove statement")
 			}
@@ -223,7 +223,7 @@ func (c create) Update(ctx *EvalContext, result ResultSet) (Value, error) {
 	return RValue{Value: result}, nil
 }
 
-func (np nodePattern) Create(ctx *EvalContext) (string, graph.Node, error) {
+func (np nodePattern) Create(ctx *EvalContext) (string, *lpg.Node, error) {
 	// Is there a variable
 	var varName string
 	if np.variable != nil {
@@ -236,7 +236,7 @@ func (np nodePattern) Create(ctx *EvalContext) (string, graph.Node, error) {
 		if np.labels != nil || np.properties != nil {
 			return "", nil, fmt.Errorf("Cannot specify labels or properties in bound node of a CREATE statement")
 		}
-		node, ok := existingNode.Get().(graph.Node)
+		node, ok := existingNode.Get().(*lpg.Node)
 		if !ok {
 			return "", nil, fmt.Errorf("Not a node: %s", varName)
 		}
@@ -252,8 +252,8 @@ func (np nodePattern) Create(ctx *EvalContext) (string, graph.Node, error) {
 	return varName, node, nil
 }
 
-func (np nodePattern) createNode(ctx *EvalContext) (graph.Node, error) {
-	labels := graph.NewStringSet()
+func (np nodePattern) createNode(ctx *EvalContext) (*lpg.Node, error) {
+	labels := lpg.NewStringSet()
 	if np.labels != nil {
 		for _, n := range *np.labels {
 			labels.Add(n.String())
@@ -267,13 +267,13 @@ func (np nodePattern) createNode(ctx *EvalContext) (graph.Node, error) {
 	return node, nil
 }
 
-func (part PatternPart) Create(ctx *EvalContext) (graph.Node, []graph.Edge, error) {
+func (part PatternPart) Create(ctx *EvalContext) (*lpg.Node, []*lpg.Edge, error) {
 	_, lastNode, err := part.start.Create(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 	firstNode := lastNode
-	edges := make([]graph.Edge, 0)
+	edges := make([]*lpg.Edge, 0)
 	for _, pathPart := range part.path {
 		_, targetNode, err := pathPart.node.Create(ctx)
 		if err != nil {
@@ -296,7 +296,7 @@ func (part PatternPart) Create(ctx *EvalContext) (graph.Node, []graph.Edge, erro
 	return firstNode, edges, nil
 }
 
-func (rel relationshipPattern) Create(ctx *EvalContext, from, to graph.Node) (graph.Edge, error) {
+func (rel relationshipPattern) Create(ctx *EvalContext, from, to *lpg.Node) (*lpg.Edge, error) {
 	if rel.rng != nil {
 		return nil, fmt.Errorf("Cannot specify range in CREATE")
 	}
@@ -321,14 +321,14 @@ func (rel relationshipPattern) Create(ctx *EvalContext, from, to graph.Node) (gr
 	if err != nil {
 		return nil, err
 	}
-	var edge graph.Edge
+	var edge *lpg.Edge
 	if rel.toLeft && !rel.toRight {
 		edge = ctx.graph.NewEdge(to, from, label, properties)
 	} else {
 		edge = ctx.graph.NewEdge(from, to, label, properties)
 	}
 	if len(varName) > 0 {
-		ctx.SetVar(varName, ValueOf([]graph.Edge{edge}))
+		ctx.SetVar(varName, ValueOf([]*lpg.Edge{edge}))
 	}
 	return edge, nil
 }
@@ -336,7 +336,7 @@ func (rel relationshipPattern) Create(ctx *EvalContext, from, to graph.Node) (gr
 func (m merge) getResults(ctx *EvalContext) (map[string]struct{}, ResultSet, error) {
 	pattern, err := m.pattern.getPattern(ctx)
 	if err != nil {
-		return nil, ResultSet{}, err
+		return nil, *NewResultSet(), err
 	}
 
 	unbound := make(map[string]struct{})
@@ -352,16 +352,17 @@ func (m merge) getResults(ctx *EvalContext) (map[string]struct{}, ResultSet, err
 
 	results := matchResultAccumulator{
 		evalCtx: ctx,
+		result:  NewResultSet(),
 	}
 	symbols, err := BuildPatternSymbols(ctx, pattern)
 	if err != nil {
-		return nil, ResultSet{}, err
+		return nil, *NewResultSet(), err
 	}
 	err = pattern.Run(ctx.graph, symbols, &results)
 	if err != nil {
-		return nil, ResultSet{}, err
+		return nil, *NewResultSet(), err
 	}
-	return unbound, results.result, nil
+	return unbound, *results.result, nil
 }
 
 func (m merge) resultsToCtx(ctx *EvalContext, results ResultSet) {
@@ -396,7 +397,7 @@ func (m merge) doMerge(ctx *EvalContext) (created bool, matched bool, result Res
 		for k, v := range vars {
 			row[k] = v
 		}
-		result = ResultSet{}
+		result = *NewResultSet()
 		result.Append(row)
 		created = true
 		return
@@ -420,7 +421,7 @@ func (m merge) processActions(ctx *EvalContext, created, matched bool, rs Result
 }
 
 func (m merge) Update(ctx *EvalContext, rs ResultSet) (Value, error) {
-	results := ResultSet{}
+	results := *NewResultSet()
 	for _, row := range rs.Rows {
 		subctx := ctx.SubContext()
 		subctx.SetVars(row)
@@ -457,7 +458,7 @@ func (m merge) TopLevelUpdate(ctx *EvalContext) (Value, error) {
 	if err := m.processActions(ctx, created, matched, rs); err != nil {
 		return nil, err
 	}
-	results := ResultSet{}
+	results := *NewResultSet()
 	for _, r := range rs.Rows {
 		newRow := make(map[string]Value)
 		for k, v := range r {

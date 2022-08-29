@@ -3,7 +3,7 @@ package opencypher
 import (
 	"testing"
 
-	"github.com/cloudprivacylabs/opencypher/graph"
+	"github.com/cloudprivacylabs/lpg"
 )
 
 func TestPatternExpr(t *testing.T) {
@@ -12,7 +12,7 @@ func TestPatternExpr(t *testing.T) {
 	   (root) -> (:c2) -> (:c3)
 	*/
 
-	g := graph.NewOCGraph()
+	g := lpg.NewGraph()
 	n1 := g.NewNode([]string{"root"}, nil)
 	n2 := g.NewNode([]string{"c1"}, nil)
 	n3 := g.NewNode([]string{"c2"}, nil)

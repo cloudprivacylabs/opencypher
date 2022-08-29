@@ -3,13 +3,13 @@ package opencypher
 import (
 	"testing"
 
-	"github.com/cloudprivacylabs/opencypher/graph"
+	"github.com/cloudprivacylabs/lpg"
 )
 
 func TestUpdate(t *testing.T) {
-	var stefan, george, swedish, peter graph.Node
-	getGraph := func() graph.Graph {
-		g := graph.NewOCGraph()
+	var stefan, george, swedish, peter *lpg.Node
+	getGraph := func() *lpg.Graph {
+		g := lpg.NewGraph()
 		// Examples from neo4j documentation
 		stefan = g.NewNode(nil, map[string]interface{}{"name": "Stefan"})
 		george = g.NewNode(nil, map[string]interface{}{"name": "George"})
@@ -120,9 +120,9 @@ RETURN n.name, labels(n) AS labels`, NewEvalContext(g))
 }
 
 func TestDelete(t *testing.T) {
-	var andy, unk, timothy, peter graph.Node
-	getGraph := func() graph.Graph {
-		g := graph.NewOCGraph()
+	var andy, unk, timothy, peter *lpg.Node
+	getGraph := func() *lpg.Graph {
+		g := lpg.NewGraph()
 		// Examples from neo4j documentation
 		andy = g.NewNode([]string{"Person"}, map[string]interface{}{"name": "Andy", "age": 36})
 		unk = g.NewNode([]string{"Person"}, map[string]interface{}{"name": "UNKNOWN"})
@@ -177,15 +177,15 @@ DELETE r`, NewEvalContext(g))
 	if g.NumNodes() != 4 {
 		t.Errorf("Wrong number of nodes")
 	}
-	if andy.GetEdges(graph.OutgoingEdge).Next() {
+	if andy.GetEdges(lpg.OutgoingEdge).Next() {
 		t.Errorf("Still connected")
 	}
 }
 
 func TestRemove(t *testing.T) {
-	var andy, timothy, peter graph.Node
-	getGraph := func() graph.Graph {
-		g := graph.NewOCGraph()
+	var andy, timothy, peter *lpg.Node
+	getGraph := func() *lpg.Graph {
+		g := lpg.NewGraph()
 		// Examples from neo4j documentation
 		andy = g.NewNode([]string{"Swedish"}, map[string]interface{}{"name": "Andy", "age": 36})
 		timothy = g.NewNode([]string{"Swedish"}, map[string]interface{}{"name": "Timothy", "age": 25})
@@ -223,7 +223,7 @@ RETURN n.name, labels(n)`, NewEvalContext(g))
 func TestCreate(t *testing.T) {
 
 	// Create one node
-	g := graph.NewOCGraph()
+	g := lpg.NewGraph()
 	_, err := ParseAndEvaluate(`create (n)`, NewEvalContext(g))
 	if err != nil {
 		t.Error(err)
@@ -233,7 +233,7 @@ func TestCreate(t *testing.T) {
 	}
 
 	// Create multiple nodes
-	g = graph.NewOCGraph()
+	g = lpg.NewGraph()
 	_, err = ParseAndEvaluate(`CREATE (n), (m)`, NewEvalContext(g))
 	if err != nil {
 		t.Error(err)
@@ -243,7 +243,7 @@ func TestCreate(t *testing.T) {
 	}
 
 	// Create node with label
-	g = graph.NewOCGraph()
+	g = lpg.NewGraph()
 	_, err = ParseAndEvaluate(`CREATE (n:Person)`, NewEvalContext(g))
 	if err != nil {
 		t.Error(err)
@@ -257,7 +257,7 @@ func TestCreate(t *testing.T) {
 		t.Errorf("Wrong labels")
 	}
 	// Create node with labels
-	g = graph.NewOCGraph()
+	g = lpg.NewGraph()
 	_, err = ParseAndEvaluate(`CREATE (n:Person:Swedish)`, NewEvalContext(g))
 	if err != nil {
 		t.Error(err)
@@ -273,7 +273,7 @@ func TestCreate(t *testing.T) {
 	}
 
 	// Create with properties
-	g = graph.NewOCGraph()
+	g = lpg.NewGraph()
 	ret, err := ParseAndEvaluate(`CREATE (a:Person {name: 'Andy'})
 RETURN a.name`, NewEvalContext(g))
 	if err != nil {
@@ -294,7 +294,7 @@ RETURN a.name`, NewEvalContext(g))
 	}
 
 	// Create relationship
-	g = graph.NewOCGraph()
+	g = lpg.NewGraph()
 	nodea := g.NewNode([]string{"Person"}, map[string]interface{}{"name": "A"})
 	nodeb := g.NewNode([]string{"Person"}, map[string]interface{}{"name": "B"})
 	ret, err = ParseAndEvaluate(`MATCH
@@ -308,7 +308,7 @@ RETURN r`, NewEvalContext(g))
 	}
 
 	// There must be an edge between a and b
-	edges := nodea.GetEdges(graph.OutgoingEdge)
+	edges := nodea.GetEdges(lpg.OutgoingEdge)
 	if !edges.Next() {
 		t.Errorf("No edge")
 	}
@@ -321,7 +321,7 @@ RETURN r`, NewEvalContext(g))
 	}
 
 	// Create a relationship and set properties
-	g = graph.NewOCGraph()
+	g = lpg.NewGraph()
 	nodea = g.NewNode([]string{"Person"}, map[string]interface{}{"name": "A"})
 	nodeb = g.NewNode([]string{"Person"}, map[string]interface{}{"name": "B"})
 	ret, err = ParseAndEvaluate(`MATCH
@@ -335,7 +335,7 @@ RETURN  r.name`, NewEvalContext(g))
 	}
 
 	// There must be an edge between a and b
-	edges = nodea.GetEdges(graph.OutgoingEdge)
+	edges = nodea.GetEdges(lpg.OutgoingEdge)
 	if !edges.Next() {
 		t.Errorf("No edge")
 	}
@@ -351,7 +351,7 @@ RETURN  r.name`, NewEvalContext(g))
 	}
 
 	// Create full path
-	g = graph.NewOCGraph()
+	g = lpg.NewGraph()
 	ret, err = ParseAndEvaluate(`CREATE p = (andy {name:'Andy'})-[:WORKS_AT]->(neo)<-[:WORKS_AT]-(michael {name: 'Michael'})
 RETURN p`, NewEvalContext(g))
 	if err != nil {
@@ -364,12 +364,11 @@ RETURN p`, NewEvalContext(g))
 }
 
 func TestMerge(t *testing.T) {
+	var charlieSheen, oliverStone, michaelDouglas, martinSheen, robReiner *lpg.Node
+	var ws, tap *lpg.Node
 
-	var charlieSheen, oliverStone, michaelDouglas, martinSheen, robReiner graph.Node
-	var ws, tap graph.Node
-
-	getGraph := func() graph.Graph {
-		g := graph.NewOCGraph()
+	getGraph := func() *lpg.Graph {
+		g := lpg.NewGraph()
 		// Examples from neo4j documentation
 		charlieSheen = g.NewNode([]string{"Person"}, map[string]interface{}{
 			"bornIn":        "New York",
@@ -574,7 +573,7 @@ func TestMerge(t *testing.T) {
 	}
 	{
 		rs := res.Get().(ResultSet).Rows[0]
-		if !rs["1"].Get().(graph.Node).HasLabel("Movie") {
+		if !rs["1"].Get().(*lpg.Node).HasLabel("Movie") {
 			t.Errorf("Wrong data: %v", rs)
 		}
 	}
@@ -594,7 +593,7 @@ func TestMerge(t *testing.T) {
 	}
 	{
 		rs := res.Get().(ResultSet).Rows[0]
-		if rs["1"].Get().([]graph.Edge)[0].GetLabel() != "KNOWS" {
+		if rs["1"].Get().([]*lpg.Edge)[0].GetLabel() != "KNOWS" {
 			t.Errorf("Wrong data: %v", rs)
 		}
 	}
@@ -614,11 +613,11 @@ func TestMerge(t *testing.T) {
 		t.Error(err)
 	}
 	{
-		n := graph.NextNodesWith(charlieSheen, "BORN_IN")
+		n := lpg.NextNodesWith(charlieSheen, "BORN_IN")
 		if x, _ := n[0].GetProperty("name"); x != "New York" {
 			t.Errorf("Wrong data: %v", n)
 		}
-		n = graph.NextNodesWith(martinSheen, "BORN_IN")
+		n = lpg.NextNodesWith(martinSheen, "BORN_IN")
 		if x, _ := n[0].GetProperty("name"); x != "Ohio" {
 			t.Errorf("Wrong data: %v", n)
 		}

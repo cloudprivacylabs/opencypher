@@ -3,14 +3,14 @@ package main
 import (
 	"fmt"
 
+	"github.com/cloudprivacylabs/lpg"
 	"github.com/cloudprivacylabs/opencypher"
-	"github.com/cloudprivacylabs/opencypher/graph"
 )
 
 // Examples are from: https://neo4j.com/docs/cypher-manual/current/clauses/match/
 func main() {
 	// Create an empty graph
-	grph := graph.NewOCGraph()
+	grph := lpg.NewGraph()
 	// Evaluation context knows the graph we are working on
 	ectx := opencypher.NewEvalContext(grph)
 	// Create the example graph. First create nodes
