@@ -1,8 +1,7 @@
 module github.com/cloudprivacylabs/opencypher
 
 go 1.18
-replace github.com/cloudprivacylabs/lpg => ../lpg
-          
+
 require (
 	github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20210803070921-b358b509191a
 	github.com/emirpasic/gods v1.18.1
@@ -10,7 +9,7 @@ require (
 )
 
 require (
-	github.com/cloudprivacylabs/lpg v0.0.0-20220824045629-1f46e17298ef // indirect
+	github.com/cloudprivacylabs/lpg v0.0.0-20220827171343-7333d1da9859 // indirect
 	golang.org/x/text v0.3.6 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
