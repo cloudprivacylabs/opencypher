@@ -9,7 +9,7 @@ require (
 )
 
 require (
-	github.com/cloudprivacylabs/lpg v0.0.0-20220830210703-5ca903fcaa2e // indirect
+	github.com/cloudprivacylabs/lpg v0.0.0-20220831004024-f5dbe1257381 // indirect
 	golang.org/x/text v0.3.6 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
