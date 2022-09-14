@@ -437,27 +437,32 @@ func oC_SinglePartQuery(ctx *parser.OC_SinglePartQueryContext) singlePartQuery {
 func oC_MultiPartQuery(ctx *parser.OC_MultiPartQueryContext) multiPartQuery {
 	ret := multiPartQuery{parts: []multiPartQueryPart{}}
 	count := ctx.GetChildCount()
-	lastIsFull := true
+	lastPartIx := -1
 	for child := 0; child < count; child++ {
 		ch := ctx.GetChild(child)
-		lastPart := &ret.parts[len(ret.parts)-1]
 		switch expr := ch.(type) {
 		case *parser.OC_ReadingClauseContext:
-			lastPart.read = append(lastPart.read, oC_ReadingClause(expr))
-			lastIsFull = true
+			if lastPartIx == -1 {
+				ret.parts = append(ret.parts, multiPartQueryPart{})
+				lastPartIx = len(ret.parts) - 1
+			}
+			ret.parts[lastPartIx].read = append(ret.parts[lastPartIx].read, oC_ReadingClause(expr))
 		case *parser.OC_UpdatingClauseContext:
-			lastPart.update = append(lastPart.update, oC_UpdatingClause(expr))
-			lastIsFull = true
+			if lastPartIx == -1 {
+				ret.parts = append(ret.parts, multiPartQueryPart{})
+				lastPartIx = len(ret.parts) - 1
+			}
+			ret.parts[lastPartIx].update = append(ret.parts[lastPartIx].update, oC_UpdatingClause(expr))
 		case *parser.OC_WithContext:
-			lastPart.with = oC_With(expr)
-			ret.parts = append(ret.parts, multiPartQueryPart{})
-			lastIsFull = false
+			if lastPartIx == -1 {
+				ret.parts = append(ret.parts, multiPartQueryPart{})
+				lastPartIx = len(ret.parts) - 1
+			}
+			ret.parts[lastPartIx].with = oC_With(expr)
+			lastPartIx = -1
 		case *parser.OC_SinglePartQueryContext:
 			ret.singleQuery = oC_SinglePartQuery(expr)
 		}
-	}
-	if !lastIsFull {
-		ret.parts = ret.parts[:len(ret.parts)-1]
 	}
 	return ret
 }

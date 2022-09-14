@@ -571,4 +571,6 @@ func (p patternComprehension) Evaluate(ctx *EvalContext) (Value, error)   { pani
 func (flt filterAtom) Evaluate(ctx *EvalContext) (Value, error)           { panic("Unimplemented") }
 func (rel relationshipsPattern) Evaluate(ctx *EvalContext) (Value, error) { panic("Unimplemented") }
 func (cnt countAtom) Evaluate(ctx *EvalContext) (Value, error)            { panic("Unimplemented") }
-func (mq multiPartQuery) Evaluate(ctx *EvalContext) (Value, error)        { panic("Unimplemented") }
+func (mq multiPartQuery) Evaluate(ctx *EvalContext) (Value, error) {
+	panic("multipart query unimplemented")
+}
