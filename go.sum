@@ -18,6 +18,8 @@ github.com/cloudprivacylabs/lpg v1.0.3 h1:1ytt0D2/qlRQD55JUGh75UTXzpY/s49ah0RSyC
 github.com/cloudprivacylabs/lpg v1.0.3/go.mod h1:3bLpI1OIk3h/ZVfGhq3sdULexmVbd7qANVhVSYbvCe8=
 github.com/cloudprivacylabs/lpg v1.0.4 h1:S7ifv7GcPUv43bbpKVlfo4MqfGBoe1tM2/fCX5yJEUw=
 github.com/cloudprivacylabs/lpg v1.0.4/go.mod h1:3bLpI1OIk3h/ZVfGhq3sdULexmVbd7qANVhVSYbvCe8=
+github.com/cloudprivacylabs/lpg v1.0.5 h1:w+vZVGkr60D4m2YGPPevUq91Y7MsPERwGpHoUPSqNok=
+github.com/cloudprivacylabs/lpg v1.0.5/go.mod h1:3bLpI1OIk3h/ZVfGhq3sdULexmVbd7qANVhVSYbvCe8=
 github.com/emirpasic/gods v1.18.0 h1:voaQ8lgxXz4FMIm08RiGs9Nx//PvUUI0FcIXK5xRi6w=
 github.com/emirpasic/gods v1.18.0/go.mod h1:8tpGGwCnJ5H4r6BWwaV6OrWmMoPhUl5jm/FMNAnJvWQ=
 github.com/emirpasic/gods v1.18.1 h1:FXtiHYKDGKCW2KzwZKx0iC0PQmdlorYgdFG9jPXJ1Bc=
