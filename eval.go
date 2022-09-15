@@ -397,6 +397,7 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 	skip := -1
 	limit := -1
 	if query.ret != nil {
+		ret.Cols = query.ret.projection.items.getProjectedNames()
 		var err error
 		if query.ret.projection.skip != nil {
 			skip, err = mustInt(query.ret.projection.skip.Evaluate(ctx))

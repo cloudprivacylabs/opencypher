@@ -203,6 +203,18 @@ type projectionItems struct {
 	items []projectionItem
 }
 
+func (p projectionItems) getProjectedNames() []string {
+	ret := make([]string, 0, len(p.items))
+	for i, item := range p.items {
+		if item.variable != nil {
+			ret = append(ret, string(*item.variable))
+		} else {
+			ret = append(ret, strconv.Itoa(i+1))
+		}
+	}
+	return ret
+}
+
 type projectionItem struct {
 	variable *variable
 	expr     Expression

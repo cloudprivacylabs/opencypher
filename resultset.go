@@ -19,6 +19,7 @@ type ResultSet struct {
 	Nodes lpg.NodeSet
 	Edges lpg.EdgeSet
 
+	Cols []string
 	Rows []map[string]Value
 }
 
