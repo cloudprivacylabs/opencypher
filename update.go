@@ -91,7 +91,7 @@ func (s *setItem) update(ctx *EvalContext, data map[string]Value, result ResultS
 				v.RemoveProperty(p)
 			}
 			for key, val := range sourceProps {
-				v.SetProperty(key, val)
+				v.SetProperty(key, ctx.PropertyValueFromNative(key, val))
 			}
 		default:
 			return ErrInvalidAssignment(fmt.Sprintf("%T: %v", v, v))
@@ -110,7 +110,7 @@ func (s *setItem) update(ctx *EvalContext, data map[string]Value, result ResultS
 				node.RemoveProperty(k)
 				continue
 			}
-			node.SetProperty(k, v)
+			node.SetProperty(k, ctx.PropertyValueFromNative(k, v))
 		}
 	default: // NodeLabels
 		node, ok := lvalue.Get().(*lpg.Node)
@@ -263,6 +263,9 @@ func (np nodePattern) createNode(ctx *EvalContext) (*lpg.Node, error) {
 	if err != nil {
 		return nil, err
 	}
+	for k, v := range properties {
+		properties[k] = ctx.PropertyValueFromNative(k, v)
+	}
 	node := ctx.graph.NewNode(labels.Slice(), properties)
 	return node, nil
 }
@@ -320,6 +323,9 @@ func (rel relationshipPattern) Create(ctx *EvalContext, from, to *lpg.Node) (*lp
 	properties, err := rel.properties.getPropertiesMap(ctx)
 	if err != nil {
 		return nil, err
+	}
+	for k, v := range properties {
+		properties[k] = ctx.PropertyValueFromNative(k, v)
 	}
 	var edge *lpg.Edge
 	if rel.toLeft && !rel.toRight {

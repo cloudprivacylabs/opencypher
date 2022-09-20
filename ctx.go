@@ -21,6 +21,10 @@ type EvalContext struct {
 	variables  map[string]Value
 	parameters map[string]Value
 	graph      *lpg.Graph
+
+	// If this function is non-nil, it will be called to filter property
+	// values when setting properties of nodes or edges
+	PropertyValueFromNativeFilter func(string, interface{}) interface{}
 }
 
 func NewEvalContext(graph *lpg.Graph) *EvalContext {
@@ -35,12 +39,22 @@ func NewEvalContext(graph *lpg.Graph) *EvalContext {
 // SubContext creates a new subcontext with a new variable set
 func (ctx *EvalContext) SubContext() *EvalContext {
 	return &EvalContext{
-		parent:     ctx,
-		funcMap:    ctx.funcMap,
-		variables:  make(map[string]Value),
-		parameters: make(map[string]Value),
-		graph:      ctx.graph,
+		parent:                        ctx,
+		funcMap:                       ctx.funcMap,
+		variables:                     make(map[string]Value),
+		parameters:                    make(map[string]Value),
+		graph:                         ctx.graph,
+		PropertyValueFromNativeFilter: ctx.PropertyValueFromNativeFilter,
 	}
+}
+
+// PropertyValueFromNative calls the ctx.PropertyValueFromNativeFilter
+// to give the caller a chance to change property values
+func (ctx *EvalContext) PropertyValueFromNative(key string, value interface{}) interface{} {
+	if ctx.PropertyValueFromNativeFilter != nil {
+		return ctx.PropertyValueFromNativeFilter(key, value)
+	}
+	return value
 }
 
 // SetParameter sets a parameter to be used in expressions
