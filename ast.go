@@ -341,8 +341,9 @@ type functionInvocation struct {
 	distinct bool
 	args     []Expression
 
-	function   Function
-	parsedArgs []Evaluatable
+	function       *Function
+	constArgs      []Evaluatable
+	constArgValues []Value
 }
 
 type patternComprehension struct {

@@ -7,15 +7,13 @@ import (
 	"github.com/cloudprivacylabs/lpg"
 )
 
-func mustInt(v Value, err error) (int, error) {
-	if err != nil {
-		return 0, err
-	}
-	i, ok := v.Get().(int)
-	if !ok {
-		return 0, ErrIntValueRequired
-	}
-	return i, nil
+// Function describes a function
+type Function struct {
+	Name      string
+	MinArgs   int
+	MaxArgs   int
+	Func      func(*EvalContext, []Evaluatable) (Value, error)
+	ValueFunc func(*EvalContext, []Value) (Value, error)
 }
 
 type ErrInvalidFunctionCall struct {
@@ -27,27 +25,44 @@ func (e ErrInvalidFunctionCall) Error() string {
 }
 
 var globalFuncs = map[string]Function{
-	"range":     rangeFunc,
-	"labels":    labelsFunc,
-	"timestamp": timestampFunc,
-	"type":      typeFunc,
+	"range": Function{
+		Name:      "range",
+		MinArgs:   2,
+		MaxArgs:   3,
+		ValueFunc: rangeFunc,
+	},
+	"labels": Function{
+		Name:      "labels",
+		MinArgs:   1,
+		MaxArgs:   1,
+		ValueFunc: labelsFunc,
+	},
+	"timestamp": Function{
+		Name:      "timestamp",
+		MinArgs:   0,
+		MaxArgs:   0,
+		ValueFunc: timestampFunc,
+	},
+	"type": Function{
+		Name:      "type",
+		MinArgs:   1,
+		MaxArgs:   1,
+		ValueFunc: typeFunc,
+	},
 }
 
-func rangeFunc(ctx *EvalContext, args []Evaluatable) (Value, error) {
-	if len(args) < 2 || len(args) > 3 {
-		return nil, ErrInvalidFunctionCall{"range(start,stop,[step]) needs 3 args"}
-	}
-	start, err := mustInt(args[0].Evaluate(ctx))
+func rangeFunc(ctx *EvalContext, args []Value) (Value, error) {
+	start, err := ValueAsInt(args[0])
 	if err != nil {
 		return nil, err
 	}
-	end, err := mustInt(args[1].Evaluate(ctx))
+	end, err := ValueAsInt(args[1])
 	if err != nil {
 		return nil, err
 	}
 	skip := 1
 	if len(args) == 3 {
-		skip, err = mustInt(args[2].Evaluate(ctx))
+		skip, err = ValueAsInt(args[2])
 		if err != nil {
 			return nil, err
 		}
@@ -68,46 +83,29 @@ func rangeFunc(ctx *EvalContext, args []Evaluatable) (Value, error) {
 	return RValue{Value: arr}, nil
 }
 
-func labelsFunc(ctx *EvalContext, args []Evaluatable) (Value, error) {
-	if len(args) != 1 {
-		return nil, ErrInvalidFunctionCall{"labels(node) needs 1 arg"}
-	}
-	v, err := args[0].Evaluate(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if v.Get() == nil {
+func labelsFunc(ctx *EvalContext, args []Value) (Value, error) {
+	if args[0].Get() == nil {
 		return RValue{}, nil
 	}
-	node, ok := v.Get().(*lpg.Node)
+	node, ok := args[0].Get().(*lpg.Node)
 	if !ok {
 		return nil, fmt.Errorf("Not a node")
 	}
 	return RValue{Value: node.GetLabels().Slice()}, nil
 }
 
-func timestampFunc(ctx *EvalContext, args []Evaluatable) (Value, error) {
-	if len(args) != 0 {
-		return nil, ErrInvalidFunctionCall{"timestamp() does not take args"}
-	}
+func timestampFunc(ctx *EvalContext, args []Value) (Value, error) {
 	return RValue{Value: int(time.Now().Unix())}, nil
 }
 
-func typeFunc(ctx *EvalContext, args []Evaluatable) (Value, error) {
-	if len(args) != 1 {
-		return nil, fmt.Errorf("type() needs one arg")
-	}
-	v, err := args[0].Evaluate(ctx)
-	if err != nil {
-		return nil, err
-	}
-	edge, ok := v.Get().(*lpg.Edge)
+func typeFunc(ctx *EvalContext, args []Value) (Value, error) {
+	edge, ok := args[0].Get().(*lpg.Edge)
 	if ok {
 		return RValue{Value: edge.GetLabel()}, nil
 	}
-	edges, ok := v.Get().([]*lpg.Edge)
+	edges, ok := args[0].Get().([]*lpg.Edge)
 	if !ok || len(edges) != 1 {
-		return nil, fmt.Errorf("Cannot determine type of %T", v.Get())
+		return nil, fmt.Errorf("Cannot determine type of %T", args[0].Get())
 	}
 	return RValue{Value: edges[0].GetLabel()}, nil
 }

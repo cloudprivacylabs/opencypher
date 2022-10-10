@@ -2,6 +2,7 @@ package opencypher
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -31,6 +32,7 @@ var (
 	ErrInvalidMapKey                  = errors.New("Invalid map key")
 	ErrNotAStringSet                  = errors.New("Not a string set")
 	ErrIntValueRequired               = errors.New("Int value required")
+	ErrStringValueRequired            = errors.New("String value required")
 	ErrExpectingResultSet             = errors.New("Expecting a result set")
 	ErrPropertiesParameterExpected    = errors.New("Parameter value cannot be used for properties")
 	ErrPropertiesExpected             = errors.New("Value cannot be used for properties")
@@ -283,30 +285,41 @@ func (f *functionInvocation) Evaluate(ctx *EvalContext) (Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		f.function = fn
+		f.function = &fn
 	}
-	args := f.parsedArgs
-	if args == nil {
-		args = make([]Evaluatable, 0, len(f.args))
-		isConst := false
+	if len(f.args) < f.function.MinArgs {
+		return nil, ErrInvalidFunctionCall{Msg: fmt.Sprintf("'%s' needs at least %d arguments", f.function.Name, f.function.MinArgs)}
+	}
+	if len(f.args) > f.function.MaxArgs {
+		return nil, ErrInvalidFunctionCall{Msg: fmt.Sprintf("'%s' accepts at most %d arguments", f.function.Name, f.function.MaxArgs)}
+	}
 
+	args := f.constArgs
+	argValues := f.constArgValues
+	if args == nil {
+		constant := true
+		args = make([]Evaluatable, 0, len(f.args))
+		argValues = make([]Value, 0, len(f.args))
 		for a := range f.args {
 			v, err := f.args[a].Evaluate(ctx)
 			if err != nil {
 				return nil, err
 			}
-			if a == 0 {
-				isConst = v.IsConst()
-			} else if !v.IsConst() {
-				isConst = false
+			if !v.IsConst() {
+				constant = false
 			}
+			argValues = append(argValues, v)
 			args = append(args, v)
 		}
-		if isConst {
-			f.parsedArgs = args
+		if constant {
+			f.constArgs = args
+			f.constArgValues = argValues
 		}
 	}
-	return f.function(ctx, args)
+	if f.function.ValueFunc != nil {
+		return f.function.ValueFunc(ctx, argValues)
+	}
+	return f.function.Func(ctx, args)
 }
 
 func (cs caseClause) Evaluate(ctx *EvalContext) (Value, error) {
@@ -400,13 +413,13 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		ret.Cols = query.ret.projection.items.getProjectedNames()
 		var err error
 		if query.ret.projection.skip != nil {
-			skip, err = mustInt(query.ret.projection.skip.Evaluate(ctx))
+			skip, err = ValueAsInt(query.ret.projection.skip.Evaluate(ctx))
 			if err != nil {
 				return nil, err
 			}
 		}
 		if query.ret.projection.limit != nil {
-			limit, err = mustInt(query.ret.projection.limit.Evaluate(ctx))
+			limit, err = ValueAsInt(query.ret.projection.limit.Evaluate(ctx))
 			if err != nil {
 				return nil, err
 			}

@@ -13,8 +13,6 @@ type ErrUnknownParameter struct {
 
 func (e ErrUnknownParameter) Error() string { return "Unknown parameter: " + e.Key }
 
-type Function func(*EvalContext, []Evaluatable) (Value, error)
-
 type EvalContext struct {
 	parent     *EvalContext
 	funcMap    map[string]Function
@@ -84,9 +82,9 @@ type ErrUnknownVariable struct {
 func (e ErrUnknownVariable) Error() string { return "Unknown variable:" + e.Name }
 
 func (ctx *EvalContext) getFunction(name string) (Function, error) {
-	f := ctx.funcMap[name]
-	if f == nil {
-		return nil, ErrUnknownFunction{name}
+	f, ok := ctx.funcMap[name]
+	if !ok {
+		return Function{}, ErrUnknownFunction{name}
 	}
 	return f, nil
 }

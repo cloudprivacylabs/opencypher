@@ -248,3 +248,29 @@ func (v RValue) String() string {
 	}
 	return fmt.Sprint(v.Value)
 }
+
+// ValueAsInt returns the int value. If value is not int, returns
+// ErrIntValueRequired. If an err argument is given, that error is returned.
+func ValueAsInt(v Value, err ...error) (int, error) {
+	if len(err) != 0 {
+		return 0, err[0]
+	}
+	i, ok := v.Get().(int)
+	if !ok {
+		return 0, ErrIntValueRequired
+	}
+	return i, nil
+}
+
+// ValueAsString returns the string value. If value is not string,
+// rReturns ErrStringValueRequired. If an err argument is given, that error is returned.
+func ValueAsString(v Value, err ...error) (string, error) {
+	if len(err) != 0 {
+		return "", err[0]
+	}
+	s, ok := v.Get().(string)
+	if !ok {
+		return "", ErrStringValueRequired
+	}
+	return s, nil
+}
