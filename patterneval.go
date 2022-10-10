@@ -110,7 +110,7 @@ func (match Match) GetResults(ctx *EvalContext) (ResultSet, error) {
 }
 
 // BuildPatternSymbols copies all the symbols referenced in the
-// pattern from the context, and puts them in a map
+// pattern from the context, and puts them in a map.
 func BuildPatternSymbols(ctx *EvalContext, pattern lpg.Pattern) (map[string]*lpg.PatternSymbol, error) {
 	symbols := make(map[string]*lpg.PatternSymbol)
 	for symbol := range pattern.GetSymbolNames().M {
@@ -122,15 +122,20 @@ func BuildPatternSymbols(ctx *EvalContext, pattern lpg.Pattern) (map[string]*lpg
 		ps := &lpg.PatternSymbol{}
 		// A variable with the same name exists
 		// Must be a Node, or []Edge
-		switch val := value.Get().(type) {
-		case *lpg.Node:
-			ps.AddNode(val)
-		case []*lpg.Edge:
-			ps.AddPath(val)
-		default:
-			return nil, ErrInvalidValueReferenceInPattern{Symbol: symbol}
+		v := value.Get()
+		if v == nil {
+			symbols[symbol] = ps
+		} else {
+			switch val := v.(type) {
+			case *lpg.Node:
+				ps.AddNode(val)
+			case []*lpg.Edge:
+				ps.AddPath(val)
+			default:
+				return nil, ErrInvalidValueReferenceInPattern{Symbol: symbol}
+			}
+			symbols[symbol] = ps
 		}
-		symbols[symbol] = ps
 	}
 	return symbols, nil
 }
