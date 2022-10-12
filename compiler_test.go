@@ -79,4 +79,21 @@ func TestBasicMatch(t *testing.T) {
 	if !(len(rs.Rows) == 2 && rs.Rows[0]["1"].Get().(*lpg.Node) == n3 && rs.Rows[1]["1"].Get().(*lpg.Node) == n3) {
 		t.Errorf("Expecting to see two rows n3: %v", rs)
 	}
+
+	{
+		ctx := NewEvalContext(g)
+		ctx.SetVar("m", RValue{})
+		ev, err := Parse("match (m)-[*]->(n:t4) return n")
+		if err != nil {
+			t.Error(err)
+		}
+		value, err := ev.Evaluate(ctx)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(value.Get().(ResultSet).Rows) != 0 {
+			t.Errorf("Empty result set expected")
+		}
+	}
+
 }
