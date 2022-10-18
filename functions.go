@@ -49,6 +49,12 @@ var globalFuncs = map[string]Function{
 		MaxArgs:   1,
 		ValueFunc: typeFunc,
 	},
+	"size": Function{
+		Name:      "size",
+		MinArgs:   1,
+		MaxArgs:   1,
+		ValueFunc: sizeFunc,
+	},
 }
 
 func rangeFunc(ctx *EvalContext, args []Value) (Value, error) {
@@ -108,4 +114,18 @@ func typeFunc(ctx *EvalContext, args []Value) (Value, error) {
 		return nil, fmt.Errorf("Cannot determine type of %T", args[0].Get())
 	}
 	return RValue{Value: edges[0].GetLabel()}, nil
+}
+
+func sizeFunc(ctx *EvalContext, args []Value) (Value, error) {
+	val := args[0].Get()
+	if val == nil {
+		return RValue{}, nil
+	}
+	if arr, ok := val.([]Value); ok {
+		return RValue{Value: len(arr)}, nil
+	}
+	if str, ok := val.(string); ok {
+		return RValue{Value: len(str)}, nil
+	}
+	return RValue{}, nil
 }
