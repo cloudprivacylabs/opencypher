@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/neo4j/neo4j-go-driver/neo4j"
+	"github.com/nleeper/goment"
 )
 
 func init() {
@@ -13,6 +14,12 @@ func init() {
 		MinArgs:   0,
 		MaxArgs:   1,
 		ValueFunc: dateFunc,
+	}
+	globalFuncs["parseDate"] = Function{
+		Name:      "parseDate",
+		MinArgs:   2,
+		MaxArgs:   2,
+		ValueFunc: parseDateFunc,
 	}
 }
 
@@ -91,4 +98,21 @@ func dateFunc(ctx *EvalContext, args []Value) (Value, error) {
 		}
 	}
 	return nil, fmt.Errorf("Invalid use of date function")
+}
+
+// parseDate(str,moment format)
+func parseDateFunc(ctx *EvalContext, args []Value) (Value, error) {
+	format, err := ValueAsString(args[1])
+	if err != nil {
+		return nil, err
+	}
+	str, err := ValueAsString(args[0])
+	if err != nil {
+		return nil, err
+	}
+	g, err := goment.New(str, format)
+	if err != nil {
+		return nil, err
+	}
+	return RValue{Value: neo4j.DateOf(g.ToTime())}, nil
 }
