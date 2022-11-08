@@ -5,8 +5,14 @@ import (
 )
 
 func comparePrimitiveValues(v1, v2 interface{}) (int, error) {
-	if v1 == nil || v2 == nil {
-		return 0, ErrOperationWithNull
+	if v1 == nil {
+		if v2 == nil {
+			return 0, nil
+		}
+		return -1, nil
+	}
+	if v2 == nil {
+		return 1, nil
 	}
 	switch value1 := v1.(type) {
 	case bool:

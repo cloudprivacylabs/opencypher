@@ -43,7 +43,7 @@ func Parse(input string) (Evaluatable, error) {
 	pr.AddErrorListener(&errListener)
 	c := pr.OC_Cypher()
 	if errListener.err != nil {
-		return nil, errListener.err
+		return nil, fmt.Errorf("%w, input: %s", errListener.err, input)
 	}
 	out := oC_Cypher(c.(*parser.OC_CypherContext))
 	return out, nil

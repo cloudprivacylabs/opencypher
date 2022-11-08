@@ -404,6 +404,11 @@ func (expr *addOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
 			ret.Const = operand.IsConst()
 			return nil
 		}
+		if ret.Value == nil || operand.Get() == nil {
+			ret.Value = nil
+			ret.Const = false
+			return nil
+		}
 		ret.Const = ret.Const && operand.IsConst()
 		var err error
 		switch retValue := ret.Value.(type) {

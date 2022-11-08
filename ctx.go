@@ -63,10 +63,13 @@ func (ctx *EvalContext) SetParameter(key string, value Value) *EvalContext {
 
 func (ctx *EvalContext) GetParameter(key string) (Value, error) {
 	value, ok := ctx.parameters[key]
-	if !ok {
+	if ok {
+		return value, nil
+	}
+	if ctx.parent == nil {
 		return nil, ErrUnknownParameter{Key: key}
 	}
-	return value, nil
+	return ctx.parent.GetParameter(key)
 }
 
 type ErrUnknownFunction struct {

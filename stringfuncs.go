@@ -1,6 +1,7 @@
 package opencypher
 
 import (
+	"fmt"
 	"strings"
 	"unicode"
 )
@@ -48,6 +49,12 @@ func init() {
 		MaxArgs:   3,
 		ValueFunc: substringFunc,
 	}
+	globalFuncs["print"] = Function{
+		Name:      "print",
+		MinArgs:   0,
+		MaxArgs:   -1,
+		ValueFunc: printFunc,
+	}
 
 }
 
@@ -57,14 +64,14 @@ func splitFunc(ctx *EvalContext, args []Value) (Value, error) {
 	}
 	str, err := ValueAsString(args[0])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("In split: %w", err)
 	}
-	if args[0].Get() == nil {
+	if args[1].Get() == nil {
 		return RValue{}, nil
 	}
 	delim, err := ValueAsString(args[1])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("In string: %w", err)
 	}
 	strs := strings.Split(str, delim)
 	out := make([]Value, 0, len(strs))
@@ -80,7 +87,7 @@ func trimFunc(ctx *EvalContext, args []Value) (Value, error) {
 	}
 	str, err := ValueAsString(args[0])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("In trim: %w", err)
 	}
 	return RValue{Value: strings.TrimSpace(str)}, nil
 }
@@ -113,11 +120,11 @@ func rightFunc(ctx *EvalContext, args []Value) (Value, error) {
 	}
 	s, err := ValueAsString(args[0])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("In right: %s", err)
 	}
 	i, err := ValueAsInt(args[1])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("In right: %s", err)
 	}
 	if i < 0 || i > len(s) {
 		return RValue{Value: ""}, nil
@@ -131,11 +138,11 @@ func leftFunc(ctx *EvalContext, args []Value) (Value, error) {
 	}
 	s, err := ValueAsString(args[0])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("In left: %w, %v", err, args[0])
 	}
 	i, err := ValueAsInt(args[1])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("In left: %w", err)
 	}
 	if i < 0 || i > len(s) {
 		return RValue{Value: ""}, nil
@@ -149,11 +156,11 @@ func substringFunc(ctx *EvalContext, args []Value) (Value, error) {
 	}
 	s, err := ValueAsString(args[0])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("In substring: %w", err)
 	}
 	start, err := ValueAsInt(args[1])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("In substring: %w", err)
 	}
 	max := -1
 	if len(args) == 3 {
@@ -162,14 +169,33 @@ func substringFunc(ctx *EvalContext, args []Value) (Value, error) {
 		}
 		max, err = ValueAsInt(args[2])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("In substring: %w", err)
+		}
+		if max < 0 {
+			return RValue{}, nil
 		}
 	}
 	if start < 0 || start > len(s) {
 		return RValue{Value: ""}, nil
 	}
-	if max > len(s) || max == -1 {
-		max = len(s)
+	end := start
+	if max == -1 {
+		end = len(s)
+	} else {
+		end = start + max
 	}
-	return RValue{Value: s[start:max]}, nil
+
+	if end > len(s) {
+		end = len(s)
+	}
+	return RValue{Value: s[start:end]}, nil
+}
+
+func printFunc(ctx *EvalContext, args []Value) (Value, error) {
+	for _, arg := range args {
+		fmt.Print(arg.Get())
+		fmt.Print(" ")
+	}
+	fmt.Println()
+	return RValue{}, nil
 }

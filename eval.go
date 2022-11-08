@@ -290,7 +290,7 @@ func (f *functionInvocation) Evaluate(ctx *EvalContext) (Value, error) {
 	if len(f.args) < f.function.MinArgs {
 		return nil, ErrInvalidFunctionCall{Msg: fmt.Sprintf("'%s' needs at least %d arguments", f.function.Name, f.function.MinArgs)}
 	}
-	if len(f.args) > f.function.MaxArgs {
+	if f.function.MaxArgs != -1 && len(f.args) > f.function.MaxArgs {
 		return nil, ErrInvalidFunctionCall{Msg: fmt.Sprintf("'%s' accepts at most %d arguments", f.function.Name, f.function.MaxArgs)}
 	}
 
@@ -337,7 +337,7 @@ func (cs caseClause) Evaluate(ctx *EvalContext) (Value, error) {
 			return nil, err
 		}
 		if cs.test != nil {
-			result, err := comparePrimitiveValues(testValue, when)
+			result, err := comparePrimitiveValues(testValue.Get(), when.Get())
 			if err != nil {
 				return nil, err
 			}
@@ -551,7 +551,7 @@ func (pe propertyExpression) Evaluate(ctx *EvalContext) (Value, error) {
 					if v == nil {
 						parent.RemoveProperty(prop)
 					} else {
-						parent.SetProperty(prop, v)
+						parent.SetProperty(prop, ctx.PropertyValueFromNative(prop, v))
 					}
 				},
 			}

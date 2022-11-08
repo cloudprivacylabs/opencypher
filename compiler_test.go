@@ -97,3 +97,18 @@ func TestBasicMatch(t *testing.T) {
 	}
 
 }
+
+func TestCaseExpr(t *testing.T) {
+	ctx := NewEvalContext(lpg.NewGraph())
+	ctx.SetVar("x", RValue{Value: "a"})
+	ctx.SetVar("y", RValue{Value: "test"})
+	ctx.SetVar("spl", RValue{Value: []Value{RValue{Value: "text"}}})
+	v, err := ParseAndEvaluate(`return case x
+   when null then y
+   else trim(substring(y,0,size(y)-size(spl[size(spl)-1])))
+   end as z`, ctx)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(v)
+}

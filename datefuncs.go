@@ -102,17 +102,23 @@ func dateFunc(ctx *EvalContext, args []Value) (Value, error) {
 
 // parseDate(str,moment format)
 func parseDateFunc(ctx *EvalContext, args []Value) (Value, error) {
+	if args[1].Get() == nil {
+		return RValue{}, nil
+	}
 	format, err := ValueAsString(args[1])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("In parseDate: %w", err)
+	}
+	if args[0].Get() == nil {
+		return RValue{}, nil
 	}
 	str, err := ValueAsString(args[0])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("In parseDate:  %w", err)
 	}
 	g, err := goment.New(str, format)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("In parseDate: %w", err)
 	}
 	return RValue{Value: neo4j.DateOf(g.ToTime())}, nil
 }
