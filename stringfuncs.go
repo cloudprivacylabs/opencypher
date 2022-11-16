@@ -2,8 +2,12 @@ package opencypher
 
 import (
 	"fmt"
+	"math"
 	"strings"
+	"time"
 	"unicode"
+
+	"github.com/araddon/dateparse"
 )
 
 func init() {
@@ -55,7 +59,12 @@ func init() {
 		MaxArgs:   -1,
 		ValueFunc: printFunc,
 	}
-
+	globalFuncs["age"] = Function{
+		Name:      "age",
+		MinArgs:   0,
+		MaxArgs:   2,
+		ValueFunc: ageFunc,
+	}
 }
 
 func splitFunc(ctx *EvalContext, args []Value) (Value, error) {
@@ -198,4 +207,39 @@ func printFunc(ctx *EvalContext, args []Value) (Value, error) {
 	}
 	fmt.Println()
 	return RValue{}, nil
+}
+
+func ageFunc(ctx *EvalContext, args []Value) (Value, error) {
+	if args[0].Get() == nil {
+		return RValue{}, nil
+	}
+	str, err := ValueAsString(args[0])
+	if err != nil {
+		return nil, fmt.Errorf("In parseDate:  %w", err)
+	}
+	tDob, err := dateparse.ParseAny(str)
+	if err != nil {
+		return nil, err
+	}
+	tDate := time.Now()
+	if len(args) > 1 && args[1].Get() != nil {
+		str, err = ValueAsString(args[1])
+		if err != nil {
+			return nil, fmt.Errorf("In parseDate:  %w", err)
+		}
+		tDate, err = dateparse.ParseAny(str)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// age will only represent the year
+	var age int
+	deltaMonths := tDob.Year()*12 + int(tDob.Month()) - 1 - (tDate.Year()*12 + int(tDate.Month()) - 1)
+	if tDate.Day() >= tDob.Day() {
+		age = int(math.Floor(float64(deltaMonths / 12)))
+		return RValue{Value: age}, nil
+	}
+	deltaMonths--
+	age = int(math.Floor(float64(deltaMonths) / 12))
+	return RValue{Value: age}, nil
 }

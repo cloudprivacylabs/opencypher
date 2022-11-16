@@ -10,6 +10,7 @@ require (
 )
 
 require (
+	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/tkuchiki/go-timezone v0.2.0 // indirect
 	golang.org/x/text v0.3.6 // indirect
