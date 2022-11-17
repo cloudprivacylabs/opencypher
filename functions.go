@@ -24,8 +24,10 @@ func (e ErrInvalidFunctionCall) Error() string {
 	return "Invalid function call: " + e.Msg
 }
 
-func RegisterGlobalFuncs(def string, fn Function) {
-	globalFuncs[def] = fn
+func RegisterGlobalFunc(fn ...Function) {
+	for _, f := range fn {
+		globalFuncs[f.Name] = f
+	}
 }
 
 var globalFuncs = map[string]Function{
