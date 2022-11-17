@@ -9,6 +9,8 @@ require (
 	github.com/nleeper/goment v1.4.4
 )
 
+require github.com/stretchr/testify v1.7.0 // indirect
+
 require (
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/tkuchiki/go-timezone v0.2.0 // indirect
