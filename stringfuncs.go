@@ -55,7 +55,6 @@ func init() {
 		MaxArgs:   -1,
 		ValueFunc: printFunc,
 	}
-
 }
 
 func splitFunc(ctx *EvalContext, args []Value) (Value, error) {

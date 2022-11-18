@@ -33,6 +33,8 @@ var (
 	ErrNotAStringSet                  = errors.New("Not a string set")
 	ErrIntValueRequired               = errors.New("Int value required")
 	ErrStringValueRequired            = errors.New("String value required")
+	ErrNeo4jDateValueRequired         = errors.New("Neo4j Date value required")
+	ErrNeo4jDateTimeValueRequired     = errors.New("Neo4j LocalDateTime value required")
 	ErrExpectingResultSet             = errors.New("Expecting a result set")
 	ErrPropertiesParameterExpected    = errors.New("Parameter value cannot be used for properties")
 	ErrPropertiesExpected             = errors.New("Value cannot be used for properties")
