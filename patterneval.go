@@ -62,51 +62,65 @@ func (match Match) GetResults(ctx *EvalContext) (ResultSet, error) {
 		}
 		patterns = append(patterns, p)
 	}
-	newContext := ctx.SubContext()
 
-	results := make([]matchResultAccumulator, len(patterns))
-	for i := range patterns {
-		results[i].evalCtx = newContext
-		results[i].result = NewResultSet()
-		symbols, err := BuildPatternSymbols(ctx, patterns[i])
-		if err != nil {
-			return *NewResultSet(), err
-		}
+	var nextPattern func(*EvalContext, []lpg.Pattern, int) error
 
-		err = patterns[i].Run(ctx.graph, symbols, &results[i])
-		if err != nil {
-			return *NewResultSet(), err
+	results := NewResultSet()
+	currentRow := make([]map[string]Value, len(patterns))
+
+	addRow := func() {
+		newRow := make(map[string]Value)
+		for _, x := range currentRow {
+			for k, v := range x {
+				newRow[k] = v
+			}
 		}
+		results.Rows = append(results.Rows, newRow)
 	}
 
-	resultSets := make([]ResultSet, 0, len(patterns))
-	for _, r := range results {
-		resultSets = append(resultSets, *r.result)
-	}
-	var err error
-	// Build resultset from results
-	rs := CartesianProduct(resultSets, match.Optional, func(row map[string]Value) bool {
-		if match.Where == nil {
-			return true
-		}
+	nextPattern = func(prevContext *EvalContext, pat []lpg.Pattern, index int) error {
+		newContext := prevContext.SubContext()
+		symbols, err := BuildPatternSymbols(newContext, pat[0])
 		if err != nil {
-			return false
+			return err
 		}
-		for k, v := range row {
-			newContext.SetVar(k, v)
+		results := matchResultAccumulator{
+			evalCtx: newContext,
+			result:  NewResultSet(),
 		}
-		rs, e := match.Where.Evaluate(newContext)
-		if e != nil {
-			err = e
-			return false
+		err = pat[0].Run(newContext.graph, symbols, &results)
+		if err != nil {
+			return err
 		}
-		if b, _ := ValueAsBool(rs); !b {
-			return false
+		for _, row := range results.result.Rows {
+			for k, v := range row {
+				newContext.SetVar(k, v)
+			}
+			currentRow[index] = row
+			if len(pat) > 1 {
+				if err := nextPattern(newContext, pat[1:], index+1); err != nil {
+					return err
+				}
+			} else {
+				if match.Where != nil {
+					rs, err := match.Where.Evaluate(newContext)
+					if err != nil {
+						return err
+					}
+					if b, _ := ValueAsBool(rs); b {
+						addRow()
+					}
+				} else {
+					addRow()
+				}
+			}
 		}
-		return true
-	})
-
-	return rs, err
+		return nil
+	}
+	if err := nextPattern(ctx, patterns, 0); err != nil {
+		return ResultSet{}, err
+	}
+	return *results, nil
 }
 
 // BuildPatternSymbols copies all the symbols referenced in the

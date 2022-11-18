@@ -112,3 +112,37 @@ func TestCaseExpr(t *testing.T) {
 	}
 	t.Log(v)
 }
+
+func TestQueryChain(t *testing.T) {
+	g := lpg.NewGraph()
+	ctx := NewEvalContext(g)
+	// (:l1:1) -[]->(:l2:1)
+	// (:l1:1) -[]->(:l3:1)
+	// (:l1:2) -[]->(:l2:2)
+	// (:l1:2) -[]->(:l3:2)
+	l1_1 := g.NewNode([]string{"l1", "1"}, nil)
+	l2_1 := g.NewNode([]string{"l2", "1"}, nil)
+	l3_1 := g.NewNode([]string{"l3", "1"}, nil)
+	l1_2 := g.NewNode([]string{"l1", "2"}, nil)
+	l2_2 := g.NewNode([]string{"l2", "2"}, nil)
+	l3_2 := g.NewNode([]string{"l3", "2"}, nil)
+	g.NewEdge(l1_1, l2_1, "edge", nil)
+	g.NewEdge(l1_1, l3_1, "edge", nil)
+	g.NewEdge(l1_2, l2_2, "edge", nil)
+	g.NewEdge(l1_2, l3_2, "edge", nil)
+
+	v, err := ParseAndEvaluate(`match (root:l1)-[]->(a:l2), (root)-[]->(b:l3) return a as a, b as b`, ctx)
+	if err != nil {
+		t.Error(err)
+	}
+	rs := v.Get().(ResultSet)
+	if len(rs.Rows) != 2 {
+		t.Errorf("Expecting 2 rows got %d", len(rs.Rows))
+	}
+	if rs.Rows[0]["a"].Get() != l2_1 {
+		t.Errorf("Wrong a")
+	}
+	if rs.Rows[0]["b"].Get() != l3_1 {
+		t.Errorf("Wrong b")
+	}
+}
