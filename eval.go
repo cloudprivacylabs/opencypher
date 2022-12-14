@@ -38,9 +38,17 @@ var (
 	ErrExpectingResultSet             = errors.New("Expecting a result set")
 	ErrPropertiesParameterExpected    = errors.New("Parameter value cannot be used for properties")
 	ErrPropertiesExpected             = errors.New("Value cannot be used for properties")
-	ErrValueDoesNotHaveProperties     = errors.New("Value does not have properties")
 	ErrNotAnLValue                    = errors.New("Not and lvalue")
 )
+
+type ErrValueDoesNotHaveProperties struct {
+	Value    interface{}
+	Property string
+}
+
+func (e ErrValueDoesNotHaveProperties) Error() string {
+	return fmt.Sprintf("Value does not have properties: %v property: %s", e.Value, e.Property)
+}
 
 type ErrInvalidIndirection string
 
@@ -271,7 +279,7 @@ func (pl propertyOrLabelsExpression) Evaluate(ctx *EvalContext) (Value, error) {
 				val = ValueOf(prop).(RValue)
 			}
 		} else {
-			return nil, ErrValueDoesNotHaveProperties
+			return nil, ErrValueDoesNotHaveProperties{Value: val.Value, Property: property.String()}
 		}
 	}
 	return val, nil
