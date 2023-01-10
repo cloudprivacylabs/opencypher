@@ -4,7 +4,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/neo4j/neo4j-go-driver/neo4j"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
 func (expr *unaryAddOrSubtractExpression) Evaluate(ctx *EvalContext) (Value, error) {
@@ -154,12 +154,12 @@ func mulfloatfloat(a, b float64, op rune) (float64, error) {
 func muldurint(a neo4j.Duration, b int64, op rune) (neo4j.Duration, error) {
 	switch op {
 	case '*':
-		return neo4j.DurationOf(a.Months()*b, a.Days()*b, a.Seconds()*b, a.Nanos()*int(b)), nil
+		return neo4j.DurationOf(a.Months*b, a.Days*b, a.Seconds*b, a.Nanos*int(b)), nil
 	case '/':
 		if b == 0 {
 			return neo4j.Duration{}, ErrDivideByZero
 		}
-		return neo4j.DurationOf(a.Months()/b, a.Days()/b, a.Seconds()/b, a.Nanos()/int(b)), nil
+		return neo4j.DurationOf(a.Months/b, a.Days/b, a.Seconds/b, a.Nanos/int(b)), nil
 	}
 	return neo4j.Duration{}, ErrInvalidDurationOperation
 }
@@ -167,7 +167,7 @@ func muldurint(a neo4j.Duration, b int64, op rune) (neo4j.Duration, error) {
 func mulintdur(a int64, b neo4j.Duration, op rune) (neo4j.Duration, error) {
 	switch op {
 	case '*':
-		return neo4j.DurationOf(b.Months()*a, b.Days()*a, b.Seconds()*a, b.Nanos()*int(a)), nil
+		return neo4j.DurationOf(b.Months*a, b.Days*a, b.Seconds*a, b.Nanos*int(a)), nil
 	default:
 		return neo4j.Duration{}, ErrInvalidDurationOperation
 	}
@@ -177,12 +177,12 @@ func muldurfloat(a neo4j.Duration, b float64, op rune) (neo4j.Duration, error) {
 	val := int64(b)
 	switch op {
 	case '*':
-		return neo4j.DurationOf(int64(a.Months()*val), int64(a.Days()*val), int64(a.Seconds()*val), a.Nanos()*int(val)), nil
+		return neo4j.DurationOf(int64(a.Months*val), int64(a.Days*val), int64(a.Seconds*val), a.Nanos*int(val)), nil
 	case '/':
 		if b == 0 {
 			return neo4j.Duration{}, ErrDivideByZero
 		}
-		return neo4j.DurationOf(int64(a.Months()/val), int64(a.Days()/val), int64(a.Seconds()/val), a.Nanos()/int(val)), nil
+		return neo4j.DurationOf(int64(a.Months/val), int64(a.Days/val), int64(a.Seconds/val), a.Nanos/int(val)), nil
 	}
 	return neo4j.Duration{}, ErrInvalidDurationOperation
 }
@@ -191,7 +191,7 @@ func mulfloatdur(a float64, b neo4j.Duration, op rune) (neo4j.Duration, error) {
 	val := int64(a)
 	switch op {
 	case '*':
-		return neo4j.DurationOf(b.Months()*val, b.Days()*val, b.Seconds()*val, b.Nanos()*int(val)), nil
+		return neo4j.DurationOf(b.Months*val, b.Days*val, b.Seconds*val, b.Nanos*int(val)), nil
 	default:
 		return neo4j.Duration{}, ErrInvalidDurationOperation
 	}
@@ -312,25 +312,25 @@ func addstringstring(a string, b string, sub bool) (string, error) {
 func adddatedur(a neo4j.Date, b neo4j.Duration, sub bool) neo4j.Date {
 	t := a.Time()
 	if sub {
-		return neo4j.DateOf(time.Date(t.Year(), t.Month()-time.Month(b.Months()), t.Day()-int(b.Days()), 0, 0, 0, 0, t.Location()))
+		return neo4j.DateOf(time.Date(t.Year(), t.Month()-time.Month(b.Months), t.Day()-int(b.Days), 0, 0, 0, 0, t.Location()))
 	}
-	return neo4j.DateOf(time.Date(t.Year(), t.Month()+time.Month(b.Months()), t.Day()+int(b.Days()), 0, 0, 0, 0, t.Location()))
+	return neo4j.DateOf(time.Date(t.Year(), t.Month()+time.Month(b.Months), t.Day()+int(b.Days), 0, 0, 0, 0, t.Location()))
 }
 
 func addtimedur(a neo4j.LocalTime, b neo4j.Duration, sub bool) neo4j.LocalTime {
 	t := a.Time()
 	if sub {
-		return neo4j.LocalTimeOf(time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second()-int(b.Seconds()), t.Nanosecond()-b.Nanos(), t.Location()))
+		return neo4j.LocalTimeOf(time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second()-int(b.Seconds), t.Nanosecond()-b.Nanos, t.Location()))
 	}
-	return neo4j.LocalTimeOf(time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second()+int(b.Seconds()), t.Nanosecond()+b.Nanos(), t.Location()))
+	return neo4j.LocalTimeOf(time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second()+int(b.Seconds), t.Nanosecond()+b.Nanos, t.Location()))
 }
 
 func adddatetimedur(a neo4j.LocalDateTime, b neo4j.Duration, sub bool) neo4j.LocalDateTime {
 	t := a.Time()
 	if sub {
-		return neo4j.LocalDateTimeOf(time.Date(t.Year(), t.Month()-time.Month(b.Months()), t.Day()-int(b.Days()), t.Hour(), t.Minute(), t.Second()-int(b.Seconds()), t.Nanosecond()-b.Nanos(), t.Location()))
+		return neo4j.LocalDateTimeOf(time.Date(t.Year(), t.Month()-time.Month(b.Months), t.Day()-int(b.Days), t.Hour(), t.Minute(), t.Second()-int(b.Seconds), t.Nanosecond()-b.Nanos, t.Location()))
 	}
-	return neo4j.LocalDateTimeOf(time.Date(t.Year(), t.Month()+time.Month(b.Months()), t.Day()+int(b.Days()), t.Hour(), t.Minute(), t.Second()+int(b.Seconds()), t.Nanosecond()+b.Nanos(), t.Location()))
+	return neo4j.LocalDateTimeOf(time.Date(t.Year(), t.Month()+time.Month(b.Months), t.Day()+int(b.Days), t.Hour(), t.Minute(), t.Second()+int(b.Seconds), t.Nanosecond()+b.Nanos, t.Location()))
 }
 
 func adddurdate(a neo4j.Duration, b neo4j.Date, sub bool) (neo4j.Date, error) {
@@ -356,9 +356,9 @@ func adddurdatetime(a neo4j.Duration, b neo4j.LocalDateTime, sub bool) (neo4j.Lo
 
 func adddurdur(a neo4j.Duration, b neo4j.Duration, sub bool) (neo4j.Duration, error) {
 	if sub {
-		return neo4j.DurationOf(a.Months()-b.Months(), a.Days()-b.Days(), a.Seconds()-b.Seconds(), a.Nanos()-b.Nanos()), nil
+		return neo4j.DurationOf(a.Months-b.Months, a.Days-b.Days, a.Seconds-b.Seconds, a.Nanos-b.Nanos), nil
 	}
-	return neo4j.DurationOf(a.Months()+b.Months(), a.Days()+b.Days(), a.Seconds()+b.Seconds(), a.Nanos()+b.Nanos()), nil
+	return neo4j.DurationOf(a.Months+b.Months, a.Days+b.Days, a.Seconds+b.Seconds, a.Nanos+b.Nanos), nil
 }
 
 func addlistlist(a, b []Value) RValue {

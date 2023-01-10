@@ -177,7 +177,7 @@ func substringFunc(ctx *EvalContext, args []Value) (Value, error) {
 	if start < 0 || start > len(s) {
 		return RValue{Value: ""}, nil
 	}
-	end := start
+	var end int
 	if max == -1 {
 		end = len(s)
 	} else {

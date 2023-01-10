@@ -1,7 +1,7 @@
 package opencypher
 
 import (
-	"github.com/neo4j/neo4j-go-driver/neo4j"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
 func comparePrimitiveValues(v1, v2 interface{}) (int, error) {
@@ -70,19 +70,19 @@ func comparePrimitiveValues(v1, v2 interface{}) (int, error) {
 		}
 	case neo4j.Duration:
 		if dur, ok := v2.(neo4j.Duration); ok {
-			if value1.Days() == dur.Days() && value1.Months() == dur.Months() && value1.Seconds() == dur.Seconds() && value1.Nanos() == dur.Nanos() {
+			if value1.Days == dur.Days && value1.Months == dur.Months && value1.Seconds == dur.Seconds && value1.Nanos == dur.Nanos {
 				return 0, nil
 			}
-			if value1.Days() < dur.Days() {
+			if value1.Days < dur.Days {
 				return -1, nil
 			}
-			if value1.Months() < dur.Months() {
+			if value1.Months < dur.Months {
 				return -1, nil
 			}
-			if value1.Seconds() < dur.Seconds() {
+			if value1.Seconds < dur.Seconds {
 				return -1, nil
 			}
-			if value1.Nanos() < dur.Nanos() {
+			if value1.Nanos < dur.Nanos {
 				return -1, nil
 			}
 			return 1, nil

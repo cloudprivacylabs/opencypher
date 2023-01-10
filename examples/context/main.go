@@ -43,10 +43,16 @@ func main() {
 		panic(err)
 	}
 	v, err = opencypher.ParseAndEvaluate("return andy.name,andy.age", ectx)
+	if err != nil {
+		panic(err)
+	}
 	name = v.Get().(opencypher.ResultSet).Rows[0]["1"].Get()
 	age = v.Get().(opencypher.ResultSet).Rows[0]["2"].Get()
 	fmt.Println(name, age) // Andy: 35
 	v, err = opencypher.ParseAndEvaluate("return stephen.name,stephen.age", ectx)
+	if err != nil {
+		panic(err)
+	}
 	name = v.Get().(opencypher.ResultSet).Rows[0]["1"].Get()
 	age = v.Get().(opencypher.ResultSet).Rows[0]["2"].Get()
 	fmt.Println(name, age) // Stephen: 35
