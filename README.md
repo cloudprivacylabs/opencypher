@@ -136,16 +136,17 @@ The return type of `Value.Get` is one of the following:
   * float64
   * bool
   * string
-  * neo4j.Duration
-  * neo4j.Date
-  * neo4j.LocalDateTime
-  * neo4j.LocalTime
+  * Duration
+  * Date
+  * Time
+  * LocalDateTime
+  * LocalTime
   * []Value
   * map[string]Value
   * lpg.StringSet
-  * *Node
-  * []*Edge
-  * lpg.ResultSet
+  * *lpg.Node
+  * []*lpg.Edge
+  * ResultSet
 
 
 This Go module is part of the [Layered Schema

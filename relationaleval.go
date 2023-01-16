@@ -1,8 +1,6 @@
 package opencypher
 
-import (
-	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
-)
+import ()
 
 func comparePrimitiveValues(v1, v2 interface{}) (int, error) {
 	if v1 == nil {
@@ -68,8 +66,8 @@ func comparePrimitiveValues(v1, v2 interface{}) (int, error) {
 			}
 			return 1, nil
 		}
-	case neo4j.Duration:
-		if dur, ok := v2.(neo4j.Duration); ok {
+	case Duration:
+		if dur, ok := v2.(Duration); ok {
 			if value1.Days == dur.Days && value1.Months == dur.Months && value1.Seconds == dur.Seconds && value1.Nanos == dur.Nanos {
 				return 0, nil
 			}
@@ -87,8 +85,8 @@ func comparePrimitiveValues(v1, v2 interface{}) (int, error) {
 			}
 			return 1, nil
 		}
-	case neo4j.Date:
-		if date, ok := v2.(neo4j.Date); ok {
+	case Date:
+		if date, ok := v2.(Date); ok {
 			t1 := value1.Time()
 			t2 := date.Time()
 			if t1.Equal(t2) {
@@ -99,8 +97,8 @@ func comparePrimitiveValues(v1, v2 interface{}) (int, error) {
 			}
 			return 0, nil
 		}
-	case neo4j.LocalTime:
-		if date, ok := v2.(neo4j.LocalTime); ok {
+	case LocalTime:
+		if date, ok := v2.(LocalTime); ok {
 			t1 := value1.Time()
 			t2 := date.Time()
 			if t1.Equal(t2) {
@@ -111,8 +109,8 @@ func comparePrimitiveValues(v1, v2 interface{}) (int, error) {
 			}
 			return 0, nil
 		}
-	case neo4j.LocalDateTime:
-		if date, ok := v2.(neo4j.LocalDateTime); ok {
+	case LocalDateTime:
+		if date, ok := v2.(LocalDateTime); ok {
 			t1 := value1.Time()
 			t2 := date.Time()
 			if t1.Equal(t2) {

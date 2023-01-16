@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
-
 	"github.com/cloudprivacylabs/lpg"
 )
 
@@ -16,10 +14,10 @@ import (
 //    float64
 //    bool
 //    string
-//    neo4j.Duration
-//    neo4j.Date
-//    neo4j.LocalDateTime
-//    neo4j.LocalTime
+//    Duration
+//    Date
+//    LocalDateTime
+//    LocalTime
 //
 //  composites:
 //    []Value
@@ -77,7 +75,7 @@ func (v RValue) Evaluate(*EvalContext) (Value, error) { return v, nil }
 // string, duration, date, datetime, localDateTime, or localTime
 func IsValuePrimitive(v Value) bool {
 	switch v.Get().(type) {
-	case int, float64, bool, string, neo4j.Duration, neo4j.Date, neo4j.LocalDateTime, neo4j.LocalTime:
+	case int, float64, bool, string, Duration, Date, LocalDateTime, LocalTime:
 		return true
 	}
 	return false
@@ -122,13 +120,13 @@ func ValueOf(in interface{}) Value {
 		return RValue{Value: v}
 	case float32:
 		return RValue{Value: float64(v)}
-	case neo4j.Duration:
+	case Duration:
 		return RValue{Value: v}
-	case neo4j.Date:
+	case Date:
 		return RValue{Value: v}
-	case neo4j.LocalDateTime:
+	case LocalDateTime:
 		return RValue{Value: v}
-	case neo4j.LocalTime:
+	case LocalTime:
 		return RValue{Value: v}
 	case *lpg.Node:
 		return RValue{Value: v}

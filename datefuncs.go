@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/nleeper/goment"
 )
 
@@ -33,7 +32,7 @@ var supportedDateFormats = []string{
 
 func dateFunc(ctx *EvalContext, args []Value) (Value, error) {
 	if len(args) == 0 {
-		return RValue{Value: neo4j.DateOf(time.Now())}, nil
+		return RValue{Value: NewDate(time.Now())}, nil
 	}
 	if len(args) == 1 {
 		if args[0].Get() == nil {
@@ -50,7 +49,7 @@ func dateFunc(ctx *EvalContext, args []Value) (Value, error) {
 				if err != nil {
 					return nil, err
 				}
-				return RValue{Value: neo4j.DateOf(time.Now().In(loc))}, nil
+				return RValue{Value: NewDate(time.Now().In(loc))}, nil
 			}
 
 			if y, ok := props["year"]; ok {
@@ -84,14 +83,14 @@ func dateFunc(ctx *EvalContext, args []Value) (Value, error) {
 				}
 
 				t := time.Date(year, month, day, 0, 0, 0, 0, time.Local)
-				return RValue{Value: neo4j.DateOf(t)}, nil
+				return RValue{Value: NewDate(t)}, nil
 			}
 		}
 
 		if str, ok := args[0].Get().(string); ok {
 			for _, f := range supportedDateFormats {
 				if t, err := time.Parse(f, str); err == nil {
-					return RValue{Value: neo4j.DateOf(t)}, nil
+					return RValue{Value: NewDate(t)}, nil
 				}
 			}
 			return nil, fmt.Errorf("Invalid date string: %s", str)
@@ -120,5 +119,5 @@ func parseDateFunc(ctx *EvalContext, args []Value) (Value, error) {
 	if err != nil {
 		return nil, fmt.Errorf("In parseDate: %w", err)
 	}
-	return RValue{Value: neo4j.DateOf(g.ToTime())}, nil
+	return RValue{Value: NewDate(g.ToTime())}, nil
 }
