@@ -2,9 +2,11 @@ module github.com/cloudprivacylabs/opencypher
 
 go 1.18
 
+replace github.com/cloudprivacylabs/lpg => /Users/jasoncruz/lpg
+
 require (
 	github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20210803070921-b358b509191a
-	github.com/cloudprivacylabs/lpg v1.0.11
+	github.com/cloudprivacylabs/lpg v1.0.14
 	github.com/nleeper/goment v1.4.4
 )
 

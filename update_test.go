@@ -174,6 +174,9 @@ DELETE r`, NewEvalContext(g))
 	if err != nil {
 		t.Error(err)
 	}
+	if g.NumEdges() > 1 {
+		t.Errorf("Wrong number of edges got %d", g.NumEdges())
+	}
 	if g.NumNodes() != 4 {
 		t.Errorf("Wrong number of nodes")
 	}
@@ -593,7 +596,7 @@ func TestMerge(t *testing.T) {
 	}
 	{
 		rs := res.Get().(ResultSet).Rows[0]
-		if rs["1"].Get().([]*lpg.Edge)[0].GetLabel() != "KNOWS" {
+		if rs["1"].Get().(*lpg.Path).GetEdge(0).GetLabel() != "KNOWS" {
 			t.Errorf("Wrong data: %v", rs)
 		}
 	}
@@ -638,5 +641,70 @@ func TestMerge(t *testing.T) {
 	}
 	if g.NumNodes() != n+5 {
 		t.Errorf("Wrong numnodes")
+	}
+
+	var a, b, c *lpg.Node
+	sg1 := func() *lpg.Graph {
+		g := lpg.NewGraph()
+		a = g.NewNode([]string{"SPY"}, map[string]interface{}{
+			"title": "Spyder",
+		})
+		b = g.NewNode([]string{"QQQ"}, map[string]interface{}{
+			"title": "Invesco",
+		})
+		c = g.NewNode([]string{"VIX"}, map[string]interface{}{
+			"title": "Volatility",
+		})
+		g.NewEdge(c, b, "edge", nil)
+		g.NewEdge(b, a, "edge", nil)
+		return g
+	}
+	sg2 := func() *lpg.Graph {
+		g := lpg.NewGraph()
+		a = g.NewNode([]string{"SPY"}, map[string]interface{}{
+			"title": "Spyder",
+		})
+		b = g.NewNode([]string{"QQQ"}, map[string]interface{}{
+			"title": "Invesco",
+		})
+		c = g.NewNode([]string{"VIX"}, map[string]interface{}{
+			"title": "Volatility",
+		})
+
+		g.NewEdge(a, b, "edge", nil)
+		g.NewEdge(b, c, "edge", nil)
+		return g
+	}
+	g = sg1()
+	res, err = ParseAndEvaluate(`merge (a:SPY {title: 'Spyder'})-[:edge]->
+	(b:QQQ {title: 'Invesco'})-[:edge]->(c:VIX {title: 'Volatility'}) return a,b,c`,
+		NewEvalContext(g))
+	if err != nil {
+		t.Error(err)
+	}
+	rs := res.Get().(ResultSet).Rows[0]
+	if rs["1"].Get().(*lpg.Node).GetLabels().String() != "SPY" {
+		t.Errorf("Wrong data: %v", rs)
+	}
+	for itr := rs["1"].Get().(*lpg.Node).GetEdges(lpg.OutgoingEdge); itr.Next(); {
+		if itr.Edge().GetTo().GetLabels().String() != "QQQ" {
+			t.Errorf("Wrong path direction: %v", rs)
+		}
+	}
+
+	g = sg2()
+	res, err = ParseAndEvaluate(`merge (a:SPY {title: 'Spyder'})<-[:edge]-
+	(b:QQQ {title: 'Invesco'})<-[:edge]-(c:VIX {title: 'Volatility'}) return a,b,c`, NewEvalContext(g))
+	if err != nil {
+		t.Error(err)
+	}
+	rs = res.Get().(ResultSet).Rows[0]
+	if rs["1"].Get().(*lpg.Node).GetLabels().String() != "SPY" {
+		t.Errorf("Wrong data: %v", rs)
+	}
+	for itr := rs["1"].Get().(*lpg.Node).GetEdges(lpg.OutgoingEdge); itr.Next(); {
+		if itr.Edge().GetFrom().GetLabels().String() != "QQQ" {
+			t.Errorf("Wrong path direction: %v", rs)
+		}
 	}
 }

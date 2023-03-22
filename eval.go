@@ -261,11 +261,15 @@ func (pl propertyOrLabelsExpression) Evaluate(ctx *EvalContext) (Value, error) {
 		}
 		wp, ok := val.Value.(withProperty)
 		if !ok {
-			if edges, ed := val.Value.([]*lpg.Edge); ed {
-				if len(edges) == 1 {
-					wp = edges[0]
+			if path, ed := val.Value.(*lpg.Path); ed {
+				if path.NumEdges() == 1 {
+					wp = path.GetEdge(0)
 					ok = true
 				}
+			}
+			if edges, k := val.Value.([]*lpg.Edge); k {
+				wp = edges[0]
+				ok = true
 			}
 		}
 		if ok {

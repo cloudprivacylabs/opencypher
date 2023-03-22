@@ -152,9 +152,9 @@ func (d deleteClause) Update(ctx *EvalContext, result ResultSet) (Value, error) 
 				}
 				item.DetachAndRemove()
 
-			case []*lpg.Edge:
-				for _, e := range item {
-					e.Remove()
+			case *lpg.Path:
+				for i := 0; i < item.NumEdges(); i++ {
+					item.GetEdge(i).Remove()
 				}
 			}
 		}
@@ -270,41 +270,41 @@ func (np nodePattern) createNode(ctx *EvalContext) (*lpg.Node, error) {
 	return node, nil
 }
 
-func (part PatternPart) Create(ctx *EvalContext) (*lpg.Node, []*lpg.Edge, error) {
+func (part PatternPart) Create(ctx *EvalContext) (*lpg.Node, *lpg.Path, error) {
 	_, lastNode, err := part.start.Create(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 	firstNode := lastNode
-	edges := make([]*lpg.Edge, 0)
+	path := &lpg.Path{}
 	for _, pathPart := range part.path {
 		_, targetNode, err := pathPart.node.Create(ctx)
 		if err != nil {
 			return nil, nil, err
 		}
-		edge, err := pathPart.rel.Create(ctx, lastNode, targetNode)
+		pe, err := pathPart.rel.Create(ctx, lastNode, targetNode)
 		if err != nil {
 			return nil, nil, err
 		}
-		edges = append(edges, edge)
+		path.Append(pe)
 		lastNode = targetNode
 	}
 	if part.variable != nil {
-		if len(edges) == 0 {
+		if path.NumEdges() == 0 {
 			ctx.SetVar(string(*part.variable), ValueOf(lastNode))
 		} else {
-			ctx.SetVar(string(*part.variable), ValueOf(edges))
+			ctx.SetVar(string(*part.variable), ValueOf(path))
 		}
 	}
-	return firstNode, edges, nil
+	return firstNode, path, nil
 }
 
-func (rel relationshipPattern) Create(ctx *EvalContext, from, to *lpg.Node) (*lpg.Edge, error) {
+func (rel relationshipPattern) Create(ctx *EvalContext, from, to *lpg.Node) (lpg.PathElement, error) {
 	if rel.rng != nil {
-		return nil, fmt.Errorf("Cannot specify range in CREATE")
+		return lpg.PathElement{}, fmt.Errorf("Cannot specify range in CREATE")
 	}
 	if rel.relTypes != nil && len(rel.relTypes.rel) > 1 {
-		return nil, fmt.Errorf("Multiple labels for an edge")
+		return lpg.PathElement{}, fmt.Errorf("Multiple labels for an edge")
 	}
 	var varName string
 	if rel.variable != nil {
@@ -313,7 +313,7 @@ func (rel relationshipPattern) Create(ctx *EvalContext, from, to *lpg.Node) (*lp
 		_, err := ctx.GetVar(varName)
 		if err == nil {
 			// Var is defined already.
-			return nil, fmt.Errorf("Cannot refer to an edge in CREATE")
+			return lpg.PathElement{}, fmt.Errorf("Cannot refer to an edge in CREATE")
 		}
 	}
 	var label string
@@ -322,21 +322,25 @@ func (rel relationshipPattern) Create(ctx *EvalContext, from, to *lpg.Node) (*lp
 	}
 	properties, err := rel.properties.getPropertiesMap(ctx)
 	if err != nil {
-		return nil, err
+		return lpg.PathElement{}, err
 	}
 	for k, v := range properties {
 		properties[k] = ctx.PropertyValueFromNative(k, v)
 	}
-	var edge *lpg.Edge
+	path := &lpg.Path{}
+	pathElement := lpg.PathElement{}
+	// TODO: find is reverse
 	if rel.toLeft && !rel.toRight {
-		edge = ctx.graph.NewEdge(to, from, label, properties)
+		pathElement.Edge = ctx.graph.NewEdge(to, from, label, properties)
+		pathElement.Reverse = true
 	} else {
-		edge = ctx.graph.NewEdge(from, to, label, properties)
+		pathElement.Edge = ctx.graph.NewEdge(from, to, label, properties)
 	}
+	path.Append(pathElement)
 	if len(varName) > 0 {
-		ctx.SetVar(varName, ValueOf([]*lpg.Edge{edge}))
+		ctx.SetVar(varName, ValueOf(path))
 	}
-	return edge, nil
+	return pathElement, nil
 }
 
 func (m merge) getResults(ctx *EvalContext) (map[string]struct{}, ResultSet, error) {
