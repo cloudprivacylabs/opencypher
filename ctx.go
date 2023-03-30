@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/cloudprivacylabs/lpg"
+	"github.com/cloudprivacylabs/lpg/v2"
 )
 
 type ErrUnknownParameter struct {

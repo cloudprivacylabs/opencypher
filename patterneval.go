@@ -1,7 +1,7 @@
 package opencypher
 
 import (
-	"github.com/cloudprivacylabs/lpg"
+	"github.com/cloudprivacylabs/lpg/v2"
 )
 
 type ErrInvalidValueReferenceInPattern struct {
@@ -40,7 +40,7 @@ type matchResultAccumulator struct {
 	err     error
 }
 
-func (acc *matchResultAccumulator) StoreResult(ctx *lpg.MatchContext, path interface{}, symbols map[string]interface{}) {
+func (acc *matchResultAccumulator) StoreResult(ctx *lpg.MatchContext, path *lpg.Path, symbols map[string]interface{}) {
 	if acc.err != nil {
 		return
 	}
@@ -143,7 +143,7 @@ func BuildPatternSymbols(ctx *EvalContext, pattern lpg.Pattern) (map[string]*lpg
 			switch val := v.(type) {
 			case *lpg.Node:
 				ps.AddNode(val)
-			case []*lpg.Edge:
+			case *lpg.Path:
 				ps.AddPath(val)
 			default:
 				return nil, ErrInvalidValueReferenceInPattern{Symbol: symbol}

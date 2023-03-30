@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"unicode"
 
-	"github.com/cloudprivacylabs/lpg"
+	"github.com/cloudprivacylabs/lpg/v2"
 )
 
 var ErrRowsHaveDifferentSizes = errors.New("Rows have different sizes")

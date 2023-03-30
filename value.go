@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cloudprivacylabs/lpg"
+	"github.com/cloudprivacylabs/lpg/v2"
 )
 
 // Value represents a computed value. Possible data types it can contain are:
@@ -24,7 +24,7 @@ import (
 //    map[string]Value
 //    lpg.StringSet
 //    *Node
-//    []*Edge
+//    *Path
 //    ResultSet
 
 type Value interface {
@@ -138,6 +138,10 @@ func ValueOf(in interface{}) Value {
 		return RValue{Value: v}
 	case lpg.StringSet:
 		return RValue{Value: v}
+	case lpg.PathElement:
+		return RValue{Value: v}
+	case *lpg.Path:
+		return RValue{Value: v}
 	}
 	panic(fmt.Sprintf("Invalid value: %v %T", in, in))
 }
@@ -209,16 +213,16 @@ func IsValueSame(v, v2 Value) bool {
 		}
 		return val1 == val2
 
-	case []*lpg.Edge:
-		val2, ok := v2.Get().([]*lpg.Edge)
+	case *lpg.Path:
+		val2, ok := v2.Get().([]*lpg.Path)
 		if !ok {
 			return false
 		}
-		if len(val1) != len(val2) {
+		if val1.NumEdges() != val1.NumEdges() {
 			return false
 		}
-		for i, x := range val1 {
-			if x != val2[i] {
+		for i := 0; i < val1.NumEdges(); i++ {
+			if val1.Slice(i, -1) != val2[i] {
 				return false
 			}
 		}

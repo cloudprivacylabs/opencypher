@@ -3,7 +3,7 @@ package opencypher
 import (
 	"testing"
 
-	"github.com/cloudprivacylabs/lpg"
+	"github.com/cloudprivacylabs/lpg/v2"
 )
 
 func TestPatternExpr(t *testing.T) {

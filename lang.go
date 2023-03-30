@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
-	"github.com/cloudprivacylabs/lpg"
+	"github.com/cloudprivacylabs/lpg/v2"
 	"github.com/cloudprivacylabs/opencypher/parser"
 )
 
@@ -61,13 +61,13 @@ func ParseAndEvaluate(input string, ctx *EvalContext) (Value, error) {
 // current node named 'this', and describes a path reaching one or
 // more nodes named 'target'. For instance:
 //
-//  (this)-[]->(target)
+//	(this)-[]->(target)
 //
 // will return all nodes reachable from the current node by one step.
 //
 // This expression:
 //
-//  (this)<[a]-()-[]->(target :x)
+//	(this)<[a]-()-[]->(target :x)
 //
 // will start from the current node, go back one nore following an
 // edge with label `a`, and then move to a node with label `x`

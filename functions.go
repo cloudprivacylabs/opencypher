@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cloudprivacylabs/lpg"
+	"github.com/cloudprivacylabs/lpg/v2"
 )
 
 // Function describes a function
@@ -115,11 +115,11 @@ func typeFunc(ctx *EvalContext, args []Value) (Value, error) {
 	if ok {
 		return RValue{Value: edge.GetLabel()}, nil
 	}
-	edges, ok := args[0].Get().([]*lpg.Edge)
-	if !ok || len(edges) != 1 {
+	path, ok := args[0].Get().(*lpg.Path)
+	if !ok || path.NumEdges() != 1 {
 		return nil, fmt.Errorf("Cannot determine type of %T", args[0].Get())
 	}
-	return RValue{Value: edges[0].GetLabel()}, nil
+	return RValue{Value: path.GetEdge(0).GetLabel()}, nil
 }
 
 func sizeFunc(ctx *EvalContext, args []Value) (Value, error) {
