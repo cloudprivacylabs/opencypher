@@ -1,7 +1,5 @@
 github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20210803070921-b358b509191a h1:6tPeghyQyDji+Q+jYDjpHNlLz/aexx/Cvk1ao92Nfbg=
 github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20210803070921-b358b509191a/go.mod h1:F7bn7fEU90QkQ3tnmaTx3LTKLEDqnwWODIYppRQ5hnY=
-github.com/cloudprivacylabs/lpg v1.0.14 h1:IRH3sS4NYiZ6ZpFOZRtnjka9lpSMEgkVsVCJqo+JJzw=
-github.com/cloudprivacylabs/lpg v1.0.14/go.mod h1:3bLpI1OIk3h/ZVfGhq3sdULexmVbd7qANVhVSYbvCe8=
 github.com/cloudprivacylabs/lpg/v2 v2.0.0 h1:Hu9UOMhrq5LCXFAbUVxVLrkIRxqCxrUjZ/kKfKhWwu8=
 github.com/cloudprivacylabs/lpg/v2 v2.0.0/go.mod h1:RydTt2iGaTjVWk+RHfrhd/NzuFfJOgQGu/wGzV1iACQ=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
