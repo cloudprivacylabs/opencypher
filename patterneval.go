@@ -12,6 +12,14 @@ func (e ErrInvalidValueReferenceInPattern) Error() string {
 	return "Invalid value reference in pattern: " + e.Symbol
 }
 
+func ResultPathToResultSet(resultPath []ResultPath) ResultSet {
+	rs := ResultSet{}
+	for _, rp := range resultPath {
+		rs.Rows = append(rs.Rows, rp.Symbols)
+	}
+	return rs
+}
+
 func (properties Properties) AsLiteral(ctx *EvalContext) ([]mapKeyValue, error) {
 	if properties.Param != nil {
 		param, err := ctx.GetParameter(string(*properties.Param))
@@ -36,7 +44,7 @@ func (properties Properties) AsLiteral(ctx *EvalContext) ([]mapKeyValue, error) 
 
 type matchResultAccumulator struct {
 	evalCtx *EvalContext
-	result  *ResultSet
+	result  []ResultPath
 	err     error
 }
 
@@ -45,38 +53,36 @@ func (acc *matchResultAccumulator) StoreResult(ctx *lpg.MatchContext, path *lpg.
 		return
 	}
 	// Record results in the context
-	result := make(map[string]Value)
+	acc.result = append(acc.result, ResultPath{Result: path, Symbols: make(map[string]Value)})
 	for k, v := range symbols {
-		result[k] = RValue{Value: v}
-		acc.evalCtx.SetVar(k, RValue{Value: v})
+		acc.result[len(acc.result)-1].Symbols[k] = ValueOf(v)
 	}
-	acc.result.Append(result)
 }
 
-func (match Match) GetResults(ctx *EvalContext) (ResultSet, error) {
+func (match Match) GetResults(ctx *EvalContext) ([]ResultPath, error) {
 	patterns := make([]lpg.Pattern, 0, len(match.Pattern.Parts))
 	for i := range match.Pattern.Parts {
 		p, err := match.Pattern.Parts[i].getPattern(ctx)
 		if err != nil {
-			return *NewResultSet(), err
+			return []ResultPath{}, err
 		}
 		patterns = append(patterns, p)
 	}
 
 	var nextPattern func(*EvalContext, []lpg.Pattern, int) error
 
-	results := NewResultSet()
-	currentRow := make([]map[string]Value, len(patterns))
+	returnResults := []ResultPath{}
+	// currentRow := make([]map[string]Value, len(patterns))
 
-	addRow := func() {
-		newRow := make(map[string]Value)
-		for _, x := range currentRow {
-			for k, v := range x {
-				newRow[k] = v
-			}
-		}
-		results.Rows = append(results.Rows, newRow)
-	}
+	// addRow := func() {
+	// 	newRow := make(map[string]Value)
+	// 	for _, x := range currentRow {
+	// 		for k, v := range x {
+	// 			newRow[k] = v
+	// 		}
+	// 	}
+	// 	results.Rows = append(results.Rows, newRow)
+	// }
 
 	nextPattern = func(prevContext *EvalContext, pat []lpg.Pattern, index int) error {
 		newContext := prevContext.SubContext()
@@ -86,17 +92,17 @@ func (match Match) GetResults(ctx *EvalContext) (ResultSet, error) {
 		}
 		results := matchResultAccumulator{
 			evalCtx: newContext,
-			result:  NewResultSet(),
+			result:  []ResultPath{},
 		}
 		err = pat[0].Run(newContext.graph, symbols, &results)
 		if err != nil {
 			return err
 		}
-		for _, row := range results.result.Rows {
-			for k, v := range row {
-				newContext.SetVar(k, v)
+		for _, row := range results.result {
+			for k, v := range row.Symbols {
+				newContext.SetVar(k, RValue{Value: v})
 			}
-			currentRow[index] = row
+			// currentRow[index] = row
 			if len(pat) > 1 {
 				if err := nextPattern(newContext, pat[1:], index+1); err != nil {
 					return err
@@ -108,19 +114,20 @@ func (match Match) GetResults(ctx *EvalContext) (ResultSet, error) {
 						return err
 					}
 					if b, _ := ValueAsBool(rs); b {
-						addRow()
+						// addRow()
+						returnResults = append(returnResults, row)
 					}
 				} else {
-					addRow()
+					returnResults = append(returnResults, row)
 				}
 			}
 		}
 		return nil
 	}
 	if err := nextPattern(ctx, patterns, 0); err != nil {
-		return ResultSet{}, err
+		return []ResultPath{}, err
 	}
-	return *results, nil
+	return returnResults, nil
 }
 
 // BuildPatternSymbols copies all the symbols referenced in the
@@ -145,7 +152,13 @@ func BuildPatternSymbols(ctx *EvalContext, pattern lpg.Pattern) (map[string]*lpg
 				ps.AddNode(val)
 			case *lpg.Path:
 				ps.AddPath(val)
+			case RValue:
+				switch rv := val.Value.(type) {
+				case *lpg.Node:
+					ps.AddNode(rv)
+				}
 			default:
+				// v RValue{Value: *lpg.Node}
 				return nil, ErrInvalidValueReferenceInPattern{Symbol: symbol}
 			}
 			symbols[symbol] = ps

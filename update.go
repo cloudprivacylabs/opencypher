@@ -6,11 +6,11 @@ import (
 	"github.com/cloudprivacylabs/lpg/v2"
 )
 
-func (s *set) Update(ctx *EvalContext, result ResultSet) (Value, error) {
+func (s *set) Update(ctx *EvalContext, result []ResultPath) (Value, error) {
 	// Work on the cartesian product of result columns
 	var err error
 	subctx := ctx.SubContext()
-	result.CartesianProduct(func(data map[string]Value) bool {
+	ResultPathToResultSet(result).CartesianProduct(func(data map[string]Value) bool {
 		subctx.SetVars(data)
 		for i := range s.items {
 			if err = s.items[i].update(subctx, data, result); err != nil {
@@ -29,7 +29,7 @@ func (s set) TopLevelUpdate(ctx *EvalContext) (Value, error) {
 	return nil, fmt.Errorf("Cannot use SET at top level")
 }
 
-func (s *setItem) update(ctx *EvalContext, data map[string]Value, result ResultSet) (err error) {
+func (s *setItem) update(ctx *EvalContext, data map[string]Value, result []ResultPath) (err error) {
 	var exprResult Value
 
 	if s.expression != nil {
@@ -130,9 +130,9 @@ func (deleteClause) TopLevelUpdate(ctx *EvalContext) (Value, error) {
 	return nil, fmt.Errorf("Cannot use DELETE at top level")
 }
 
-func (d deleteClause) Update(ctx *EvalContext, result ResultSet) (Value, error) {
+func (d deleteClause) Update(ctx *EvalContext, result []ResultPath) (Value, error) {
 	subctx := ctx.SubContext()
-	for _, row := range result.Rows {
+	for _, row := range ResultPathToResultSet(result).Rows {
 		subctx.SetVars(row)
 		for _, expr := range d.exprs {
 			v, err := expr.Evaluate(subctx)
@@ -166,9 +166,9 @@ func (remove) TopLevelUpdate(ctx *EvalContext) (Value, error) {
 	return nil, fmt.Errorf("Cannot use REMOVE at top level")
 }
 
-func (r remove) Update(ctx *EvalContext, result ResultSet) (Value, error) {
+func (r remove) Update(ctx *EvalContext, result []ResultPath) (Value, error) {
 	subctx := ctx.SubContext()
-	for _, row := range result.Rows {
+	for _, row := range ResultPathToResultSet(result).Rows {
 		subctx.SetVars(row)
 		for _, item := range r.items {
 			if item.property != nil {
@@ -213,8 +213,8 @@ func (c create) TopLevelUpdate(ctx *EvalContext) (Value, error) {
 	return nil, nil
 }
 
-func (c create) Update(ctx *EvalContext, result ResultSet) (Value, error) {
-	for _, row := range result.Rows {
+func (c create) Update(ctx *EvalContext, result []ResultPath) (Value, error) {
+	for _, row := range ResultPathToResultSet(result).Rows {
 		ctx.SetVars(row)
 		if _, err := c.TopLevelUpdate(ctx); err != nil {
 			return nil, err
@@ -343,10 +343,10 @@ func (rel relationshipPattern) Create(ctx *EvalContext, from, to *lpg.Node) (lpg
 	return pathElement, nil
 }
 
-func (m merge) getResults(ctx *EvalContext) (map[string]struct{}, ResultSet, error) {
+func (m merge) getResults(ctx *EvalContext) (map[string]struct{}, []ResultPath, error) {
 	pattern, err := m.pattern.getPattern(ctx)
 	if err != nil {
-		return nil, *NewResultSet(), err
+		return nil, []ResultPath{}, err
 	}
 
 	unbound := make(map[string]struct{})
@@ -362,24 +362,25 @@ func (m merge) getResults(ctx *EvalContext) (map[string]struct{}, ResultSet, err
 
 	results := matchResultAccumulator{
 		evalCtx: ctx,
-		result:  NewResultSet(),
+		result:  []ResultPath{},
 	}
 	symbols, err := BuildPatternSymbols(ctx, pattern)
 	if err != nil {
-		return nil, *NewResultSet(), err
+		return nil, []ResultPath{}, err
 	}
 	err = pattern.Run(ctx.graph, symbols, &results)
 	if err != nil {
-		return nil, *NewResultSet(), err
+		return nil, []ResultPath{}, err
 	}
-	return unbound, *results.result, nil
+	return unbound, results.result, nil
 }
 
-func (m merge) resultsToCtx(ctx *EvalContext, results ResultSet) {
-	if len(results.Rows) > 0 {
-		for k := range results.Rows[0] {
+func (m merge) resultsToCtx(ctx *EvalContext, result []ResultPath) {
+	rs := ResultPathToResultSet(result)
+	if len(rs.Rows) > 0 {
+		for k := range rs.Rows[0] {
 			if IsNamedVar(k) {
-				col := results.Column(k)
+				col := rs.Column(k)
 				if len(col) == 1 {
 					ctx.SetVar(k, col[0])
 				} else {
@@ -390,12 +391,13 @@ func (m merge) resultsToCtx(ctx *EvalContext, results ResultSet) {
 	}
 }
 
-func (m merge) doMerge(ctx *EvalContext) (created bool, matched bool, result ResultSet, err error) {
+func (m merge) doMerge(ctx *EvalContext) (created bool, matched bool, result []ResultPath, err error) {
 	_, result, err = m.getResults(ctx)
 	if err != nil {
 		return
 	}
-	if len(result.Rows) == 0 {
+	rs := ResultPathToResultSet(result)
+	if len(rs.Rows) == 0 {
 		// Nothing found
 		subctx := ctx.SubContext()
 		_, _, err = m.pattern.Create(subctx)
@@ -407,8 +409,7 @@ func (m merge) doMerge(ctx *EvalContext) (created bool, matched bool, result Res
 		for k, v := range vars {
 			row[k] = v
 		}
-		result = *NewResultSet()
-		result.Append(row)
+		rs.Append(row)
 		created = true
 		return
 	}
@@ -417,7 +418,7 @@ func (m merge) doMerge(ctx *EvalContext) (created bool, matched bool, result Res
 	return
 }
 
-func (m merge) processActions(ctx *EvalContext, created, matched bool, rs ResultSet) error {
+func (m merge) processActions(ctx *EvalContext, created, matched bool, rs []ResultPath) error {
 	for _, action := range m.actions {
 		if (created && action.on == mergeActionOnCreate) ||
 			(matched && action.on == mergeActionOnMatch) {
@@ -430,20 +431,20 @@ func (m merge) processActions(ctx *EvalContext, created, matched bool, rs Result
 	return nil
 }
 
-func (m merge) Update(ctx *EvalContext, rs ResultSet) (Value, error) {
-	results := *NewResultSet()
+func (m merge) Update(ctx *EvalContext, result []ResultPath) (Value, error) {
+	rs := ResultPathToResultSet(result)
 	for _, row := range rs.Rows {
 		subctx := ctx.SubContext()
 		subctx.SetVars(row)
-		created, matched, rs, err := m.doMerge(subctx)
+		created, matched, rp, err := m.doMerge(subctx)
 		if err != nil {
 			return nil, err
 		}
-		if err := m.processActions(subctx, created, matched, rs); err != nil {
+		if err := m.processActions(subctx, created, matched, rp); err != nil {
 			return nil, err
 		}
 		if len(rs.Rows) == 0 {
-			results.Append(row)
+			rs.Append(row)
 		} else {
 			for _, r := range rs.Rows {
 				newRow := make(map[string]Value)
@@ -453,28 +454,28 @@ func (m merge) Update(ctx *EvalContext, rs ResultSet) (Value, error) {
 				for k, v := range r {
 					newRow[k] = v
 				}
-				results.Append(newRow)
+				rs.Append(newRow)
 			}
 		}
 	}
-	return RValue{Value: results}, nil
+	return RValue{Value: rs}, nil
 }
 
 func (m merge) TopLevelUpdate(ctx *EvalContext) (Value, error) {
-	created, matched, rs, err := m.doMerge(ctx)
+	created, matched, rp, err := m.doMerge(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if err := m.processActions(ctx, created, matched, rs); err != nil {
+	if err := m.processActions(ctx, created, matched, rp); err != nil {
 		return nil, err
 	}
-	results := *NewResultSet()
+	rs := ResultPathToResultSet(rp)
 	for _, r := range rs.Rows {
 		newRow := make(map[string]Value)
 		for k, v := range r {
 			newRow[k] = v
 		}
-		results.Append(newRow)
+		rs.Append(newRow)
 	}
-	return RValue{Value: results}, nil
+	return RValue{Value: rs}, nil
 }

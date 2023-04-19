@@ -5,11 +5,17 @@ import (
 	"strings"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
+	"github.com/cloudprivacylabs/lpg/v2"
 	"github.com/cloudprivacylabs/opencypher/parser"
 )
 
 type Evaluatable interface {
 	Evaluate(*EvalContext) (Value, error)
+}
+
+type ResultPath struct {
+	Result  *lpg.Path
+	Symbols map[string]Value
 }
 
 type regularQuery struct {
@@ -81,11 +87,11 @@ type multiPartQuery struct {
 }
 
 type ReadingClause interface {
-	GetResults(*EvalContext) (ResultSet, error)
+	GetResults(*EvalContext) ([]ResultPath, error)
 }
 
 type UpdatingClause interface {
-	Update(*EvalContext, ResultSet) (Value, error)
+	Update(*EvalContext, []ResultPath) (Value, error)
 	TopLevelUpdate(*EvalContext) (Value, error)
 }
 
@@ -445,8 +451,9 @@ func oC_SinglePartQuery(ctx *parser.OC_SinglePartQueryContext) singlePartQuery {
 	return ret
 }
 
-//oC_MultiPartQuery
-//              :  ( ( oC_ReadingClause SP? )* ( oC_UpdatingClause SP? )* oC_With SP? )+ oC_SinglePartQuery ;
+// oC_MultiPartQuery
+//
+//	:  ( ( oC_ReadingClause SP? )* ( oC_UpdatingClause SP? )* oC_With SP? )+ oC_SinglePartQuery ;
 func oC_MultiPartQuery(ctx *parser.OC_MultiPartQueryContext) multiPartQuery {
 	ret := multiPartQuery{parts: []multiPartQueryPart{}}
 	count := ctx.GetChildCount()
@@ -663,11 +670,11 @@ func oC_ComparisonExpression(ctx *parser.OC_ComparisonExpressionContext) Express
 }
 
 // oC_AddOrSubtractExpression :
-//      oC_MultiplyDivideModuloExpression (
-//           ( SP? '+' SP? oC_MultiplyDivideModuloExpression ) |
-//           ( SP? '-' SP? oC_MultiplyDivideModuloExpression )
-//      )*
 //
+//	oC_MultiplyDivideModuloExpression (
+//	     ( SP? '+' SP? oC_MultiplyDivideModuloExpression ) |
+//	     ( SP? '-' SP? oC_MultiplyDivideModuloExpression )
+//	)*
 func oC_AddOrSubtractExpression(ctx *parser.OC_AddOrSubtractExpressionContext) Expression {
 	ret := &addOrSubtractExpression{}
 	target := &ret.add
@@ -695,10 +702,11 @@ func oC_AddOrSubtractExpression(ctx *parser.OC_AddOrSubtractExpressionContext) E
 }
 
 // oC_MultiplyDivideModuloExpression :
-//      oC_PowerOfExpression (
-//          ( SP? '*' SP? oC_PowerOfExpression ) |
-//          ( SP? '/' SP? oC_PowerOfExpression ) |
-//          ( SP? '%' SP? oC_PowerOfExpression ) )* ;
+//
+//	oC_PowerOfExpression (
+//	    ( SP? '*' SP? oC_PowerOfExpression ) |
+//	    ( SP? '/' SP? oC_PowerOfExpression ) |
+//	    ( SP? '%' SP? oC_PowerOfExpression ) )* ;
 func oC_MultiplyDivideModuloExpression(ctx *parser.OC_MultiplyDivideModuloExpressionContext) Expression {
 	ret := &multiplyDivideModuloExpression{}
 	count := ctx.GetChildCount()
@@ -728,7 +736,8 @@ func oC_MultiplyDivideModuloExpression(ctx *parser.OC_MultiplyDivideModuloExpres
 }
 
 // oC_PowerOfExpression :
-//          oC_UnaryAddOrSubtractExpression ( SP? '^' SP? oC_UnaryAddOrSubtractExpression )* ;
+//
+//	oC_UnaryAddOrSubtractExpression ( SP? '^' SP? oC_UnaryAddOrSubtractExpression )* ;
 func oC_PowerOfExpression(ctx *parser.OC_PowerOfExpressionContext) Evaluatable {
 	ret := powerOfExpression{}
 	for _, x := range ctx.AllOC_UnaryAddOrSubtractExpression() {
@@ -1170,7 +1179,7 @@ func oC_FilterExpression(ctx *parser.OC_FilterExpressionContext) filterExpressio
 	return ret
 }
 
-//oC_RelationshipsPattern   :  oC_NodePattern ( SP? oC_PatternElementChain )+ ;
+// oC_RelationshipsPattern   :  oC_NodePattern ( SP? oC_PatternElementChain )+ ;
 // oC_PatternElementChain :  oC_RelationshipPattern SP? oC_NodePattern ;
 func oC_RelationshipsPattern(ctx *parser.OC_RelationshipsPatternContext) relationshipsPattern {
 	ret := relationshipsPattern{
