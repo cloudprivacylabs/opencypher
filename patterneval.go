@@ -12,14 +12,6 @@ func (e ErrInvalidValueReferenceInPattern) Error() string {
 	return "Invalid value reference in pattern: " + e.Symbol
 }
 
-func ResultPathToResultSet(resultPath []ResultPath) ResultSet {
-	rs := ResultSet{}
-	for _, rp := range resultPath {
-		rs.Rows = append(rs.Rows, rp.Symbols)
-	}
-	return rs
-}
-
 func (properties Properties) AsLiteral(ctx *EvalContext) ([]mapKeyValue, error) {
 	if properties.Param != nil {
 		param, err := ctx.GetParameter(string(*properties.Param))
@@ -152,11 +144,11 @@ func BuildPatternSymbols(ctx *EvalContext, pattern lpg.Pattern) (map[string]*lpg
 				ps.AddNode(val)
 			case *lpg.Path:
 				ps.AddPath(val)
-			case RValue:
-				switch rv := val.Value.(type) {
-				case *lpg.Node:
-					ps.AddNode(rv)
-				}
+			// case RValue:
+			// 	switch rv := val.Value.(type) {
+			// 	case *lpg.Node:
+			// 		ps.AddNode(rv)
+			// 	}
 			default:
 				// v RValue{Value: *lpg.Node}
 				return nil, ErrInvalidValueReferenceInPattern{Symbol: symbol}
