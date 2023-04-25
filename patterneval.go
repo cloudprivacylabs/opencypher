@@ -92,7 +92,7 @@ func (match Match) GetResults(ctx *EvalContext) ([]ResultPath, error) {
 		}
 		for _, row := range results.result {
 			for k, v := range row.Symbols {
-				newContext.SetVar(k, RValue{Value: v})
+				newContext.SetVar(k, v)
 			}
 			// currentRow[index] = row
 			if len(pat) > 1 {
