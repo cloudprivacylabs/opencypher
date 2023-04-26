@@ -1,25 +1,26 @@
 package opencypher
 
 // CartesianProuductPaths builds the product of all the resultpaths
-func CartesianProductPaths(paths [][]ResultPath, filter func(rp []ResultPath) bool) [][]ResultPath {
+func CartesianProductPaths(ctx *EvalContext, numItems int, getItem func(int, *EvalContext) []ResultPath, filter func([]ResultPath) bool) [][]ResultPath {
 	// nextIndex retrieves the next index for the next set
 	nextIndex := func(ix []int) {
 		for j := len(ix) - 1; j >= 0; j-- {
 			ix[j]++
-			if j == 0 || ix[j] < len(paths[j]) {
+			if j == 0 || ix[j] < len(getItem(j, ctx)) {
 				return
 			}
 			ix[j] = 0
 		}
 	}
-	if len(paths) == 1 {
-		return paths
+	if numItems == 1 {
+
 	}
-	product := make([][]ResultPath, 0, len(paths))
-	for ix := make([]int, len(paths)); ix[0] < len(paths[0]); nextIndex(ix) {
+	product := make([][]ResultPath, 0, numItems)
+	basePath := getItem(0, ctx)
+	for ix := make([]int, numItems); ix[0] < len(basePath); nextIndex(ix) {
 		r := make([]ResultPath, 0, len(ix))
-		for j, k := range ix {
-			r = append(r, paths[j][k])
+		for j := range ix {
+			r = append(r, getItem(j, ctx)...)
 		}
 		if filter(r) {
 			product = append(product, r)

@@ -33,7 +33,7 @@ func TestCartesianProductPaths(t *testing.T) {
 	}
 	path.Append(pe...)
 	{
-		i := [][]ResultPath{
+		x := [][]ResultPath{
 			{
 				ResultPath{
 					Result: path,
@@ -59,9 +59,13 @@ func TestCartesianProductPaths(t *testing.T) {
 		// j := [][]ResultPath{3, 2, 1}
 		// k := [][]ResultPath{2, 1, 3}
 
-		prod := CartesianProductPaths(i, func(_ []ResultPath) bool { return true })
+		prod := CartesianProductPaths(NewEvalContext(target), len(x), func(i int, ec *EvalContext) []ResultPath {
+			return x[i]
+		}, func([]ResultPath) bool {
+			return true
+		})
 		n := len(prod)
-		e := len(i)
+		e := len(x)
 		fmt.Println(prod)
 		if n != e {
 			t.Fatalf("there should be %d but there were %d groups\n", e, n)

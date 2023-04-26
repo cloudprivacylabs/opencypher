@@ -76,6 +76,7 @@ func (match Match) GetResults(ctx *EvalContext) ([]ResultPath, error) {
 	// 	results.Rows = append(results.Rows, newRow)
 	// }
 
+	// CartesianProductPaths()
 	nextPattern = func(prevContext *EvalContext, pat []lpg.Pattern, index int) error {
 		newContext := prevContext.SubContext()
 		symbols, err := BuildPatternSymbols(newContext, pat[0])
