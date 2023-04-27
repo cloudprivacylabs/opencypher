@@ -59,7 +59,7 @@ func TestCartesianProductPaths(t *testing.T) {
 		// j := [][]ResultPath{3, 2, 1}
 		// k := [][]ResultPath{2, 1, 3}
 
-		prod := CartesianProductPaths(NewEvalContext(target), len(x), func(i int, ec *EvalContext) []ResultPath {
+		prod := CartesianProductPaths(NewEvalContext(target), len(x), true, func(i int, ec *EvalContext) []ResultPath {
 			return x[i]
 		}, func([]ResultPath) bool {
 			return true
