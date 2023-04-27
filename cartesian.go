@@ -1,47 +1,35 @@
 package opencypher
 
 // CartesianProuductPaths builds the product of all the resultpaths
-func CartesianProductPaths(ctx *EvalContext, numItems int, all bool, getItem func(int, *EvalContext) []ResultPath, filter func([]ResultPath) bool) [][]ResultPath {
+func CartesianProductPaths(ctx *EvalContext, numItems int, getItem func(int, *EvalContext) []ResultPath, filter func([]ResultPath) bool) [][]ResultPath {
 	product := make([][]ResultPath, numItems)
-	product[0] = getItem(0, ctx)
-	if numItems == 1 {
-		return product
+	indexes := make([]int, numItems)
+	columnProcessor := func(next func(int)) func(int) {
+		return func(column int) {
+			product[column] = getItem(column, ctx)
+			for i := range product[column] {
+				indexes[column] = i
+				next(column + 1)
+			}
+		}
 	}
 
-	indexes := make([]int, numItems)
-	for {
-		var path []ResultPath
-		for i := range indexes {
-			path = product[i]
-			if path == nil {
-				path = getItem(i, ctx)
-			}
-			if indexes[i] >= len(path) {
-				if !all {
-					return product
-				}
-				if filter(path) {
-					product = append(product, path)
-				}
-				product[i] = nil
-			}
+	result := make([][]ResultPath, 0)
+
+	capture := func(int) {
+		row := make([]ResultPath, 0, numItems)
+		for i, x := range indexes {
+			row = append(row, product[i][x])
 		}
-		carry := false
-		for i := range indexes {
-			indexes[i]++
-			if indexes[i] >= len(path) {
-				indexes[i] = 0
-				carry = true
-				continue
-			}
-			carry = false
-			break
-		}
-		if carry {
-			break
-		}
+		result = append(result, row)
 	}
-	return product
+
+	next := columnProcessor(capture)
+	for column := numItems - 2; column >= 0; column-- {
+		next = columnProcessor(next)
+	}
+	next(0)
+	return result
 }
 
 // nextIndex retrieves the next index for the next set
