@@ -36,7 +36,7 @@ func (properties Properties) AsLiteral(ctx *EvalContext) ([]mapKeyValue, error) 
 
 type matchResultAccumulator struct {
 	evalCtx *EvalContext
-	result  *ResultSet
+	result  []ResultPath
 	err     error
 }
 
@@ -45,82 +45,114 @@ func (acc *matchResultAccumulator) StoreResult(ctx *lpg.MatchContext, path *lpg.
 		return
 	}
 	// Record results in the context
-	result := make(map[string]Value)
+	acc.result = append(acc.result, ResultPath{Result: path, Symbols: make(map[string]Value)})
 	for k, v := range symbols {
-		result[k] = RValue{Value: v}
-		acc.evalCtx.SetVar(k, RValue{Value: v})
+		acc.result[len(acc.result)-1].Symbols[k] = ValueOf(v)
 	}
-	acc.result.Append(result)
 }
 
-func (match Match) GetResults(ctx *EvalContext) (ResultSet, error) {
+func (match Match) GetResults(ctx *EvalContext) ([]ResultPath, error) {
 	patterns := make([]lpg.Pattern, 0, len(match.Pattern.Parts))
 	for i := range match.Pattern.Parts {
 		p, err := match.Pattern.Parts[i].getPattern(ctx)
 		if err != nil {
-			return *NewResultSet(), err
+			return []ResultPath{}, err
 		}
 		patterns = append(patterns, p)
 	}
 
-	var nextPattern func(*EvalContext, []lpg.Pattern, int) error
+	// var nextPattern func(*EvalContext, []lpg.Pattern, int) error
 
-	results := NewResultSet()
-	currentRow := make([]map[string]Value, len(patterns))
+	returnResults := []ResultPath{}
+	// currentRow := make([]map[string]Value, len(patterns))
 
-	addRow := func() {
-		newRow := make(map[string]Value)
-		for _, x := range currentRow {
-			for k, v := range x {
-				newRow[k] = v
-			}
-		}
-		results.Rows = append(results.Rows, newRow)
-	}
+	// addRow := func() {
+	// 	newRow := make(map[string]Value)
+	// 	for _, x := range currentRow {
+	// 		for k, v := range x {
+	// 			newRow[k] = v
+	// 		}
+	// 	}
+	// 	results.Rows = append(results.Rows, newRow)
+	// }
 
-	nextPattern = func(prevContext *EvalContext, pat []lpg.Pattern, index int) error {
-		newContext := prevContext.SubContext()
-		symbols, err := BuildPatternSymbols(newContext, pat[0])
-		if err != nil {
-			return err
-		}
+	// CartesianProductPaths()
+	allPaths := CartesianProductPaths(ctx, len(patterns), func(ix int, ctx *EvalContext) ([]ResultPath, error) {
+		newContext := ctx.SubContext()
+		symbols, _ := BuildPatternSymbols(ctx, patterns[ix])
+		product := make([]ResultPath, 0)
 		results := matchResultAccumulator{
 			evalCtx: newContext,
-			result:  NewResultSet(),
+			result:  []ResultPath{},
 		}
-		err = pat[0].Run(newContext.graph, symbols, &results)
+		err := patterns[0].Run(newContext.graph, symbols, &results)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		for _, row := range results.result.Rows {
-			for k, v := range row {
-				newContext.SetVar(k, v)
-			}
-			currentRow[index] = row
-			if len(pat) > 1 {
-				if err := nextPattern(newContext, pat[1:], index+1); err != nil {
-					return err
+		for _, row := range results.result {
+			if match.Where != nil {
+				rs, err := match.Where.Evaluate(newContext)
+				if err != nil {
+					return nil, err
+				}
+				if b, _ := ValueAsBool(rs); b {
+					// addRow()
+					product = append(product, row)
 				}
 			} else {
-				if match.Where != nil {
-					rs, err := match.Where.Evaluate(newContext)
-					if err != nil {
-						return err
-					}
-					if b, _ := ValueAsBool(rs); b {
-						addRow()
-					}
-				} else {
-					addRow()
-				}
+				product = append(product, row)
 			}
 		}
-		return nil
-	}
-	if err := nextPattern(ctx, patterns, 0); err != nil {
-		return ResultSet{}, err
-	}
-	return *results, nil
+		return product, nil
+
+	}, func(filterPaths []ResultPath) bool {
+		return true
+	})
+
+	// nextPattern = func(prevContext *EvalContext, pat []lpg.Pattern, index int) error {
+	// 	newContext := prevContext.SubContext()
+	// 	symbols, err := BuildPatternSymbols(newContext, pat[0])
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	results := matchResultAccumulator{
+	// 		evalCtx: newContext,
+	// 		result:  []ResultPath{},
+	// 	}
+	// 	err = pat[0].Run(newContext.graph, symbols, &results)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	for _, row := range results.result {
+	// 		for k, v := range row.Symbols {
+	// 			newContext.SetVar(k, v)
+	// 		}
+	// 		// currentRow[index] = row
+	// 		if len(pat) > 1 {
+	// 			if err := nextPattern(newContext, pat[1:], index+1); err != nil {
+	// 				return err
+	// 			}
+	// 		} else {
+	// 			if match.Where != nil {
+	// 				rs, err := match.Where.Evaluate(newContext)
+	// 				if err != nil {
+	// 					return err
+	// 				}
+	// 				if b, _ := ValueAsBool(rs); b {
+	// 					// addRow()
+	// 					product = append(product, row)
+	// 				}
+	// 			} else {
+	// 				product = append(product, row)
+	// 			}
+	// 		}
+	// 	}
+	// 	return nil
+	// }
+	// if err := nextPattern(ctx, patterns, 0); err != nil {
+	// 	return []ResultPath{}, err
+	// }
+	return returnResults, nil
 }
 
 // BuildPatternSymbols copies all the symbols referenced in the

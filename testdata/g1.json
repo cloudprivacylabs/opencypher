@@ -1,0 +1,60 @@
+{
+    "nodes": [
+        {
+            "n": 0,
+            "properties": {
+                "id": "0"
+            },
+            "edges": [
+                { "to": 1, "label": "a" }
+            ]
+        },
+        {
+            "n": 1,
+            "properties": {
+                "id": "1"
+            },
+            "edges": [
+                { "to": 2, "label": "b" },
+                { "to": 3, "label": "c" }
+            ]
+        },
+        {
+            "n": 2,
+            "properties": {
+                "id": "2"
+            },
+            "edges": [
+                { "to":0, "label": "d"}
+            ]
+        },
+        {
+            "n": 3,
+            "properties": {
+                "id": "3"
+            },
+            "edges": [
+                { "to": 4, "label": "d"},
+                { "to": 2, "label": "f"}
+            ]
+        },
+        {
+            "n": 4,
+            "properties": {
+                "id": "4"
+            },
+            "edges": [
+                { "to": 5, "label":"g"}
+            ]
+        },
+        {
+            "n": 5,
+            "properties": {
+                "id": "5"
+            },
+            "edges": [
+                { "to": 3, "label": "h" }
+            ]
+        }
+    ]
+}

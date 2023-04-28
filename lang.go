@@ -100,15 +100,15 @@ func (p PatternPart) FindRelative(this *lpg.Node) ([]*lpg.Node, error) {
 
 	resultAccumulator := matchResultAccumulator{
 		evalCtx: ctx,
-		result:  NewResultSet(),
+		result:  []ResultPath{},
 	}
 	err = pattern.Run(ctx.graph, symbols, &resultAccumulator)
 	if err != nil {
 		return nil, err
 	}
-
-	ret := make([]*lpg.Node, 0, len(resultAccumulator.result.Rows))
-	for _, row := range resultAccumulator.result.Rows {
+	rs := ResultPathToResultSet(resultAccumulator.result)
+	ret := make([]*lpg.Node, 0, len(rs.Rows))
+	for _, row := range rs.Rows {
 		t, ok := row["target"]
 		if !ok {
 			continue

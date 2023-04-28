@@ -456,14 +456,17 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		}
 		return nil
 	}
-	results := *NewResultSet()
+	results := make([]ResultPath, 0)
+	var rs ResultSet
 	if len(query.read) > 0 {
-		for _, r := range query.read {
-			rs, err := r.GetResults(ctx)
+		for i, r := range query.read {
+			rp, err := r.GetResults(ctx)
 			if err != nil {
 				return nil, err
 			}
-			results.Add(rs)
+			if len(rp) != 0 {
+				rs.Rows = append(rs.Rows, rp[i].Symbols)
+			}
 		}
 
 		for _, upd := range query.update {
@@ -471,12 +474,14 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 			if err != nil {
 				return nil, err
 			}
-			results = v.Get().(ResultSet)
+			results = v.Get().([]ResultPath)
 		}
 		if query.ret == nil {
 			return RValue{Value: *NewResultSet()}, nil
 		}
-		err := project(results.Rows)
+
+		// rs = ResultPathToResultSet(results)
+		err := project(rs.Rows)
 		if err != nil {
 			return nil, err
 		}
@@ -489,15 +494,15 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 			return nil, err
 		}
 		if v != nil && v.Get() != nil {
-			results = v.Get().(ResultSet)
+			results = v.Get().([]ResultPath)
 		}
 	}
 	if query.ret == nil {
 		return RValue{Value: *NewResultSet()}, nil
 	}
 
-	if len(results.Rows) > 0 {
-		for _, row := range results.Rows {
+	if len(rs.Rows) > 0 {
+		for _, row := range rs.Rows {
 			val, err := query.ret.projection.items.Project(ctx, row)
 			if err != nil {
 				return nil, err
@@ -593,7 +598,7 @@ func (pe propertyExpression) Evaluate(ctx *EvalContext) (Value, error) {
 	return val, nil
 }
 
-func (unwind unwind) GetResults(ctx *EvalContext) (ResultSet, error)      { panic("Unimplemented") }
+func (unwind unwind) GetResults(ctx *EvalContext) ([]ResultPath, error)   { panic("Unimplemented") }
 func (ls listComprehension) Evaluate(ctx *EvalContext) (Value, error)     { panic("Unimplemented") }
 func (p patternComprehension) Evaluate(ctx *EvalContext) (Value, error)   { panic("Unimplemented") }
 func (flt filterAtom) Evaluate(ctx *EvalContext) (Value, error)           { panic("Unimplemented") }
