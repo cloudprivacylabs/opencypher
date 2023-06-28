@@ -145,7 +145,7 @@ The return type of `Value.Get` is one of the following:
   * map[string]Value
   * lpg.StringSet
   * *lpg.Node
-  * []*lpg.Edge
+  * *lpg.Path
   * ResultSet
 
 
