@@ -28,7 +28,7 @@ import (
 //    ResultSet
 
 type Value interface {
-	Evaluatable
+	Expression
 	Get() interface{}
 	IsConst() bool
 }

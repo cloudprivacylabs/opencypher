@@ -25,7 +25,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	age, _ := v.Get().(opencypher.ResultSet).Rows[0]["1"].Get().(*lpg.Node).GetProperty("age")
+	age, _ := v.Rows[0]["1"].Get().(*lpg.Node).GetProperty("age")
 	fmt.Println(age) // This will print 34
 
 	// The context knows andy
@@ -33,8 +33,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	name := v.Get().(opencypher.ResultSet).Rows[0]["1"].Get()
-	age = v.Get().(opencypher.ResultSet).Rows[0]["2"].Get()
+	name := v.Rows[0]["1"].Get()
+	age = v.Rows[0]["2"].Get()
 	fmt.Println(name, age) // This will print Andy <nil>, andy does not have an age propety
 
 	// This will set age for all nodes
@@ -46,14 +46,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	name = v.Get().(opencypher.ResultSet).Rows[0]["1"].Get()
-	age = v.Get().(opencypher.ResultSet).Rows[0]["2"].Get()
+	name = v.Rows[0]["1"].Get()
+	age = v.Rows[0]["2"].Get()
 	fmt.Println(name, age) // Andy: 35
 	v, err = opencypher.ParseAndEvaluate("return stephen.name,stephen.age", ectx)
 	if err != nil {
 		panic(err)
 	}
-	name = v.Get().(opencypher.ResultSet).Rows[0]["1"].Get()
-	age = v.Get().(opencypher.ResultSet).Rows[0]["2"].Get()
+	name = v.Rows[0]["1"].Get()
+	age = v.Rows[0]["2"].Get()
 	fmt.Println(name, age) // Stephen: 35
 }

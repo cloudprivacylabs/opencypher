@@ -36,8 +36,8 @@ func GetParser(input string) *parser.CypherParser {
 	return p
 }
 
-// GetEvaluatable returns an evaluatable object
-func Parse(input string) (Evaluatable, error) {
+// GetEvaluatable returns a result set provider object
+func Parse(input string) (ResultSetProvider, error) {
 	pr := GetParser(input)
 	errListener := errorListener{}
 	pr.AddErrorListener(&errListener)
@@ -49,12 +49,12 @@ func Parse(input string) (Evaluatable, error) {
 	return out, nil
 }
 
-func ParseAndEvaluate(input string, ctx *EvalContext) (Value, error) {
+func ParseAndEvaluate(input string, ctx *EvalContext) (ResultSet, error) {
 	e, err := Parse(input)
 	if err != nil {
-		return nil, err
+		return ResultSet{}, err
 	}
-	return e.Evaluate(ctx)
+	return e.GetResultSet(ctx)
 }
 
 // ParsePatternExpr parses the pattern expression that starts at the

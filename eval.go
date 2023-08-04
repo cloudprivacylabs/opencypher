@@ -312,7 +312,7 @@ func (f *functionInvocation) Evaluate(ctx *EvalContext) (Value, error) {
 	argValues := f.constArgValues
 	if args == nil {
 		constant := true
-		args = make([]Evaluatable, 0, len(f.args))
+		args = make([]Expression, 0, len(f.args))
 		argValues = make([]Value, 0, len(f.args))
 		for a := range f.args {
 			v, err := f.args[a].Evaluate(ctx)
@@ -383,43 +383,23 @@ func (v variable) Evaluate(ctx *EvalContext) (Value, error) {
 	return NewLValue(val), nil
 }
 
-// Evaluate a regular query, which is a single query with an optional
-// union list
-func (query regularQuery) Evaluate(ctx *EvalContext) (Value, error) {
-	contexts := make([]*EvalContext, 0)
-
-	lastContext := ctx.SubContext()
-	contexts = append(contexts, lastContext)
-	result, err := query.singleQuery.Evaluate(lastContext)
+// Evaluate a union
+func (query union) GetResultSet(ctx *EvalContext) (ResultSet, error) {
+	resultSet, err := query.left.GetResultSet(ctx.SubContext())
 	if err != nil {
-		return nil, err
+		return ResultSet{}, err
 	}
-	resultSet, ok := result.Get().(ResultSet)
-	if !ok {
-		return nil, ErrExpectingResultSet
+	resultSetRight, err := query.right.GetResultSet(ctx.SubContext())
+	if err != nil {
+		return ResultSet{}, err
 	}
-	for _, u := range query.unions {
-		lastContext = ctx.SubContext()
-		contexts = append(contexts, lastContext)
-		newResult, err := u.singleQuery.Evaluate(lastContext)
-		if err != nil {
-			return nil, err
-		}
-		newResultSet, ok := newResult.Get().(ResultSet)
-		if !ok {
-			return nil, ErrExpectingResultSet
-		}
-		if err := resultSet.Union(newResultSet, u.all); err != nil {
-			return nil, err
-		}
+	if err := resultSet.Union(resultSetRight, query.all); err != nil {
+		return ResultSet{}, err
 	}
-	for _, c := range contexts {
-		ctx.SetVars(c.GetVarsNearestScope())
-	}
-	return RValue{Value: resultSet}, nil
+	return resultSet, nil
 }
 
-func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
+func (query singlePartQuery) GetResultSet(ctx *EvalContext) (ResultSet, error) {
 	ret := *NewResultSet()
 	skip := -1
 	limit := -1
@@ -429,13 +409,13 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		if query.ret.projection.skip != nil {
 			skip, err = ValueAsInt(query.ret.projection.skip.Evaluate(ctx))
 			if err != nil {
-				return nil, err
+				return ResultSet{}, err
 			}
 		}
 		if query.ret.projection.limit != nil {
 			limit, err = ValueAsInt(query.ret.projection.limit.Evaluate(ctx))
 			if err != nil {
-				return nil, err
+				return ResultSet{}, err
 			}
 		}
 	}
@@ -461,7 +441,7 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		for _, r := range query.read {
 			rs, err := r.GetResults(ctx)
 			if err != nil {
-				return nil, err
+				return ResultSet{}, err
 			}
 			results.Add(rs)
 		}
@@ -469,49 +449,49 @@ func (query singlePartQuery) Evaluate(ctx *EvalContext) (Value, error) {
 		for _, upd := range query.update {
 			v, err := upd.Update(ctx, results)
 			if err != nil {
-				return nil, err
+				return ResultSet{}, err
 			}
 			results = v.Get().(ResultSet)
 		}
 		if query.ret == nil {
-			return RValue{Value: *NewResultSet()}, nil
+			return *NewResultSet(), nil
 		}
 		err := project(results.Rows)
 		if err != nil {
-			return nil, err
+			return ResultSet{}, err
 		}
-		return RValue{Value: ret}, nil
+		return ret, nil
 	}
 
 	for _, upd := range query.update {
 		v, err := upd.TopLevelUpdate(ctx)
 		if err != nil {
-			return nil, err
+			return ResultSet{}, err
 		}
 		if v != nil && v.Get() != nil {
 			results = v.Get().(ResultSet)
 		}
 	}
 	if query.ret == nil {
-		return RValue{Value: *NewResultSet()}, nil
+		return *NewResultSet(), nil
 	}
 
 	if len(results.Rows) > 0 {
 		for _, row := range results.Rows {
 			val, err := query.ret.projection.items.Project(ctx, row)
 			if err != nil {
-				return nil, err
+				return ResultSet{}, err
 			}
 			ret.Rows = append(ret.Rows, val)
 		}
 	} else {
 		val, err := query.ret.projection.items.Project(ctx, nil)
 		if err != nil {
-			return nil, err
+			return ResultSet{}, err
 		}
 		ret.Rows = append(ret.Rows, val)
 	}
-	return RValue{Value: ret}, nil
+	return ret, nil
 }
 
 func (prj projectionItems) Project(ctx *EvalContext, values map[string]Value) (map[string]Value, error) {
@@ -599,6 +579,6 @@ func (p patternComprehension) Evaluate(ctx *EvalContext) (Value, error)   { pani
 func (flt filterAtom) Evaluate(ctx *EvalContext) (Value, error)           { panic("Unimplemented") }
 func (rel relationshipsPattern) Evaluate(ctx *EvalContext) (Value, error) { panic("Unimplemented") }
 func (cnt countAtom) Evaluate(ctx *EvalContext) (Value, error)            { panic("Unimplemented") }
-func (mq multiPartQuery) Evaluate(ctx *EvalContext) (Value, error) {
+func (mq multiPartQuery) GetResultSet(ctx *EvalContext) (ResultSet, error) {
 	panic("multipart query unimplemented")
 }

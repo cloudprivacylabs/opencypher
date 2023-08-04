@@ -42,7 +42,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(v.Get().(opencypher.ResultSet).Rows[0]["person"])
+	fmt.Println(v.Rows[0]["person"])
 }
 ```
 
@@ -69,7 +69,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	age, _ := v.Get().(opencypher.ResultSet).Rows[0]["1"].Get().(*graph.Node).GetProperty("age")
+	age, _ := v.Rows[0]["1"].Get().(*graph.Node).GetProperty("age")
 	fmt.Println(age) // This will print 34
 }
 ```
@@ -82,40 +82,40 @@ Using the example in https://neo4j.com/docs/cypher-manual/current/clauses/match/
 	// Get all nodes
 	ectx = opencypher.NewEvalContext(grph)
 	res, err := opencypher.ParseAndEvaluate(`match (n) return n`, ectx)
-	fmt.Println("match (n) return n:", res.Get().(opencypher.ResultSet).Rows)
+	fmt.Println("match (n) return n:", res.Rows)
 
 	// Get all movies
 	ectx = opencypher.NewEvalContext(grph)
 	res, err = opencypher.ParseAndEvaluate(`match (n:Movie) return n.title`, ectx)
-	fmt.Println("match (n:Movie) return n.title:", res.Get().(opencypher.ResultSet).Rows)
+	fmt.Println("match (n:Movie) return n.title:", res.Rows)
 
 	// Get related node
 	ectx = opencypher.NewEvalContext(grph)
 	res, err = opencypher.ParseAndEvaluate(`match (director {name: 'Oliver Stone'}) --(movie:Movie) return movie.title`, ectx)
-	fmt.Println("match (director {name: 'Oliver Stone'}) --(movie:Movie) return movie.title:", res.Get().(opencypher.ResultSet).Rows)
+	fmt.Println("match (director {name: 'Oliver Stone'}) --(movie:Movie) return movie.title:", res.Rows)
 	ectx = opencypher.NewEvalContext(grph)
 	res, err = opencypher.ParseAndEvaluate(`match (director {name: 'Oliver Stone'}) --> (movie:Movie) return movie.title`, ectx)
-	fmt.Println("match (director {name: 'Oliver Stone'}) --> (movie:Movie) return movie.title:", res.Get().(opencypher.ResultSet).Rows)
+	fmt.Println("match (director {name: 'Oliver Stone'}) --> (movie:Movie) return movie.title:", res.Rows)
 
 	// Get relationship type
 	ectx = opencypher.NewEvalContext(grph)
 	res, err = opencypher.ParseAndEvaluate(`match (:Person {name: 'Oliver Stone'}) -[r]->(movie) return r`, ectx)
-	fmt.Println("match (:Person {name: 'Oliver Stone'}) -[r]->(movie) return r:", res.Get().(opencypher.ResultSet).Rows)
+	fmt.Println("match (:Person {name: 'Oliver Stone'}) -[r]->(movie) return r:", res.Rows)
 ```
 
 ### Values
 
-Opencypher expressions return an object of type `Value`. `Value.Get`
-returns the value contained in the value object. For most queries,
-this value is of type `opencypher.ResultSet`. A `ResultSet` contains
-`Rows` that are `map[string]Value` objects. If the query explicitly
-names its columns, the map will contains those names as the
-keys. Otherwise, the columns will be "1", "2", etc. 
+OpenCypher expressions returns `Value`s. Queries return
+`ResultSetProvider` instances. Top-level APIs will return `ResultSet`
+objects, which is a tabular representation of the result of the
+operation. A `ResultSet` contains `Rows` that are `map[string]Value`
+objects. If the query explicitly names its columns, the map will
+contains those names as the keys. Otherwise, the columns will be "1",
+"2", etc.
 
 The number of rows in the result set:
 
 ```
-rs:=value.Get().(opencypher.ResultSet)
 numResults:=len(rs.Rows)
 ```
 

@@ -136,8 +136,8 @@ func (expr comparisonExpression) Evaluate(ctx *EvalContext) (Value, error) {
 		return RValue{}, nil
 	}
 	ret := RValue{Value: val.Get(), Const: val.IsConst()}
-	for i := range expr.second {
-		second, err := expr.second[i].expr.Evaluate(ctx)
+	for i := range expr.rest {
+		second, err := expr.rest[i].expr.Evaluate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -148,7 +148,7 @@ func (expr comparisonExpression) Evaluate(ctx *EvalContext) (Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		switch expr.second[i].op {
+		switch expr.rest[i].op {
 		case "=":
 			ret.Value = result == 0
 		case "<>":

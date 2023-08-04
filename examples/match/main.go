@@ -42,12 +42,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("match (n) return n:", res.Get().(opencypher.ResultSet).Rows)
+	fmt.Println("match (n) return n:", res.Rows)
 
 	// Get all movies
 	ectx = opencypher.NewEvalContext(grph)
 	res, err = opencypher.ParseAndEvaluate(`match (n:Movie) return n.title`, ectx)
-	fmt.Println("match (n:Movie) return n.title:", res.Get().(opencypher.ResultSet).Rows)
+	fmt.Println("match (n:Movie) return n.title:", res.Rows)
 
 	// Get related node
 	ectx = opencypher.NewEvalContext(grph)
@@ -55,13 +55,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("match (director {name: 'Oliver Stone'}) --(movie:Movie) return movie.title:", res.Get().(opencypher.ResultSet).Rows)
+	fmt.Println("match (director {name: 'Oliver Stone'}) --(movie:Movie) return movie.title:", res.Rows)
 	ectx = opencypher.NewEvalContext(grph)
 	res, err = opencypher.ParseAndEvaluate(`match (director {name: 'Oliver Stone'}) --> (movie:Movie) return movie.title`, ectx)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("match (director {name: 'Oliver Stone'}) --> (movie:Movie) return movie.title:", res.Get().(opencypher.ResultSet).Rows)
+	fmt.Println("match (director {name: 'Oliver Stone'}) --> (movie:Movie) return movie.title:", res.Rows)
 
 	// Get relationship type
 	ectx = opencypher.NewEvalContext(grph)
@@ -69,7 +69,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("match (:Person {name: 'Oliver Stone'}) -[r]->(movie) return r:", res.Get().(opencypher.ResultSet).Rows)
+	fmt.Println("match (:Person {name: 'Oliver Stone'}) -[r]->(movie) return r:", res.Rows)
 
 	// Match on relationship type
 	ectx = opencypher.NewEvalContext(grph)
@@ -78,7 +78,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(`MATCH (wallstreet:Movie {title: 'Wall Street'})<-[:ACTED_IN]-(actor) RETURN actor.name:`, res.Get().(opencypher.ResultSet).Rows)
+	fmt.Println(`MATCH (wallstreet:Movie {title: 'Wall Street'})<-[:ACTED_IN]-(actor) RETURN actor.name:`, res.Rows)
 
 	// Multiple relationship types
 	ectx = opencypher.NewEvalContext(grph)
@@ -87,7 +87,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(`MATCH (wallstreet:Movie {title: 'Wall Street'})<-[:ACTED_IN|:DIRECTED]-(person) RETURN person.name:`, res.Get().(opencypher.ResultSet).Rows)
+	fmt.Println(`MATCH (wallstreet:Movie {title: 'Wall Street'})<-[:ACTED_IN|:DIRECTED]-(person) RETURN person.name:`, res.Rows)
 
 	// Relationship type and variable
 	ectx = opencypher.NewEvalContext(grph)
@@ -95,7 +95,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(`MATCH (wallstreet {title: 'Wall Street'})<-[r:ACTED_IN]-(actor) RETURN r.role:`, res.Get().(opencypher.ResultSet).Rows)
+	fmt.Println(`MATCH (wallstreet {title: 'Wall Street'})<-[r:ACTED_IN]-(actor) RETURN r.role:`, res.Rows)
 
 	// Multiple relationships
 	ectx = opencypher.NewEvalContext(grph)
@@ -105,7 +105,7 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(`MATCH (charlie {name: 'Charlie Sheen'})-[:ACTED_IN]->(movie)<-[:DIRECTED]-(director)
-	RETURN movie.title, director.name:`, res.Get().(opencypher.ResultSet).Rows)
+	RETURN movie.title, director.name:`, res.Rows)
 
 	// Variable length relationships
 	ectx = opencypher.NewEvalContext(grph)
@@ -113,7 +113,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(`MATCH (charlie {name: 'Charlie Sheen'})-[:ACTED_IN*1..3]-(movie:Movie) RETURN movie.title:`, res.Get().(opencypher.ResultSet).Rows)
+	fmt.Println(`MATCH (charlie {name: 'Charlie Sheen'})-[:ACTED_IN*1..3]-(movie:Movie) RETURN movie.title:`, res.Rows)
 
 	// Variable length relationships with multiple relationship types
 	ectx = opencypher.NewEvalContext(grph)
@@ -121,5 +121,5 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(`MATCH (charlie {name: 'Charlie Sheen'})-[:ACTED_IN|DIRECTED*2]-(person:Person) RETURN person.name:`, res.Get().(opencypher.ResultSet).Rows)
+	fmt.Println(`MATCH (charlie {name: 'Charlie Sheen'})-[:ACTED_IN|DIRECTED*2]-(person:Person) RETURN person.name:`, res.Rows)
 }

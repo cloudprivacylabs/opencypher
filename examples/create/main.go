@@ -24,7 +24,7 @@ func main() {
 	}
 	// MATCH returns a result set. The first row of the resultset has
 	// the named result "person" which is a node
-	fmt.Println(v.Get().(opencypher.ResultSet).Rows[0]["person"])
+	fmt.Println(v.Rows[0]["person"])
 
 	// Find Andy
 	v, err = opencypher.ParseAndEvaluate(`MATCH (y {name:"Andy"}) return y`, ectx)
@@ -33,14 +33,14 @@ func main() {
 	}
 	// If results are not explicitly named, they are returned as column
 	// "1", column "2", etc.
-	fmt.Println(v.Get().(opencypher.ResultSet).Rows[0]["1"])
+	fmt.Println(v.Rows[0]["1"])
 
 	// Find all nodes
 	v, err = opencypher.ParseAndEvaluate(`MATCH (k) return k`, ectx)
 	if err != nil {
 		panic(err)
 	}
-	for _, row := range v.Get().(opencypher.ResultSet).Rows {
+	for _, row := range v.Rows {
 		fmt.Println(row)
 	}
 }

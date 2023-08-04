@@ -23,12 +23,12 @@ func TestUpdate(t *testing.T) {
 
 	// Set a property
 	g := getGraph()
-	v, err := ParseAndEvaluate(`match (n {name: 'Andy'}) set n.surname='Taylor' return n.name,n.surname`, NewEvalContext(g))
+	rs, err := ParseAndEvaluate(`match (n {name: 'Andy'}) set n.surname='Taylor' return n.name,n.surname`, NewEvalContext(g))
 	if err != nil {
 		t.Error(err)
 	}
-	if len(v.Get().(ResultSet).Rows) != 1 {
-		t.Errorf("Rows expected to be 1: %d", len(v.Get().(ResultSet).Rows))
+	if len(rs.Rows) != 1 {
+		t.Errorf("Rows expected to be 1: %d", len(rs.Rows))
 	}
 	if v, _ := swedish.GetProperty("surname"); v != "Taylor" {
 		t.Errorf("Wrong update: %+v", swedish)
@@ -36,7 +36,7 @@ func TestUpdate(t *testing.T) {
 
 	// Remove a property
 	g = getGraph()
-	v, err = ParseAndEvaluate(`MATCH (n {name: 'Andy'})
+	rs, err = ParseAndEvaluate(`MATCH (n {name: 'Andy'})
 SET n.name = null
 RETURN n.name, n.age`, NewEvalContext(g))
 	if err != nil {
@@ -48,7 +48,7 @@ RETURN n.name, n.age`, NewEvalContext(g))
 
 	// Copy properties
 	g = getGraph()
-	v, err = ParseAndEvaluate(`match (at {name: 'Andy'}), (pn {name: 'Peter'}) set at=pn return at.name,at.age,pn.name,pn.age`, NewEvalContext(g))
+	rs, err = ParseAndEvaluate(`match (at {name: 'Andy'}), (pn {name: 'Peter'}) set at=pn return at.name,at.age,pn.name,pn.age`, NewEvalContext(g))
 	if err != nil {
 		t.Error(err)
 	}
@@ -60,7 +60,7 @@ RETURN n.name, n.age`, NewEvalContext(g))
 
 	// Replace properties
 	g = getGraph()
-	v, err = ParseAndEvaluate(`MATCH (p {name: 'Peter'})
+	rs, err = ParseAndEvaluate(`MATCH (p {name: 'Peter'})
 SET p = {name: 'Peter Smith', position: 'Entrepreneur'}
 RETURN p.name, p.age, p.position`, NewEvalContext(g))
 	if err != nil {
@@ -75,7 +75,7 @@ RETURN p.name, p.age, p.position`, NewEvalContext(g))
 
 	// Remove all properties
 	g = getGraph()
-	v, err = ParseAndEvaluate(`MATCH (p {name: 'Peter'})
+	rs, err = ParseAndEvaluate(`MATCH (p {name: 'Peter'})
 SET p = {}
 RETURN p.name, p.age`, NewEvalContext(g))
 	if err != nil {
@@ -90,7 +90,7 @@ RETURN p.name, p.age`, NewEvalContext(g))
 
 	// Mutate specific props
 	g = getGraph()
-	v, err = ParseAndEvaluate(`MATCH (p {name: 'Peter'})
+	rs, err = ParseAndEvaluate(`MATCH (p {name: 'Peter'})
 SET p += {age: 38, hungry: true, position: 'Entrepreneur'}
 RETURN p.name, p.age, p.hungry, p.position`, NewEvalContext(g))
 	if err != nil {
@@ -108,7 +108,7 @@ RETURN p.name, p.age, p.hungry, p.position`, NewEvalContext(g))
 
 	// Set a label
 	g = getGraph()
-	v, err = ParseAndEvaluate(`MATCH (n {name: 'Stefan'})
+	rs, err = ParseAndEvaluate(`MATCH (n {name: 'Stefan'})
 SET n:German
 RETURN n.name, labels(n) AS labels`, NewEvalContext(g))
 	if err != nil {
@@ -292,7 +292,7 @@ RETURN a.name`, NewEvalContext(g))
 	if s, _ := node.GetProperty("name"); s != "Andy" {
 		t.Errorf("Wrong name")
 	}
-	if ret.Get().(ResultSet).Rows[0]["1"].Get() != "Andy" {
+	if ret.Rows[0]["1"].Get() != "Andy" {
 		t.Errorf("Wrong result: %v", ret)
 	}
 
@@ -349,7 +349,7 @@ RETURN  r.name`, NewEvalContext(g))
 	if edge.GetLabel() != "RELTYPE" {
 		t.Errorf("Wronglabel")
 	}
-	if ret.Get().(ResultSet).Rows[0]["1"].Get() != "A<->B" {
+	if ret.Rows[0]["1"].Get() != "A<->B" {
 		t.Errorf("Wrong name: %v", ret)
 	}
 
@@ -467,8 +467,8 @@ func TestMerge(t *testing.T) {
 	if g.NumNodes() != n {
 		t.Errorf("No new nodes expected")
 	}
-	if res.Get().(ResultSet).Rows[0]["1"].Get() != "Michael Douglas" ||
-		res.Get().(ResultSet).Rows[0]["2"].Get() != "New Jersey" {
+	if res.Rows[0]["1"].Get() != "Michael Douglas" ||
+		res.Rows[0]["2"].Get() != "New Jersey" {
 		t.Errorf("Wrong result")
 	}
 
@@ -484,7 +484,7 @@ func TestMerge(t *testing.T) {
 		t.Error(err)
 	}
 	if g.NumNodes() != n+3 {
-		t.Errorf("3 new nodes expected, got %d %+v", g.NumNodes(), res.Get())
+		t.Errorf("3 new nodes expected, got %d %+v", g.NumNodes(), res)
 	}
 
 	//  Merge with ON CREATE
@@ -500,11 +500,11 @@ func TestMerge(t *testing.T) {
 		t.Error(err)
 	}
 	if g.NumNodes() != n+1 {
-		t.Errorf("1 new nodes expected, got %d %+v", g.NumNodes(), res.Get())
+		t.Errorf("1 new nodes expected, got %d %+v", g.NumNodes(), res)
 	}
-	if res.Get().(ResultSet).Rows[0]["1"].Get() != "Keanu Reeves" ||
-		res.Get().(ResultSet).Rows[0]["2"].Get() == nil {
-		t.Errorf("Wrong data: %+v", res.Get().(ResultSet).Rows[0])
+	if res.Rows[0]["1"].Get() != "Keanu Reeves" ||
+		res.Rows[0]["2"].Get() == nil {
+		t.Errorf("Wrong data: %+v", res.Rows[0])
 	}
 	// 3.2. Merge with ON MATCH
 	// Merging nodes and setting properties on found nodes.
@@ -553,7 +553,7 @@ func TestMerge(t *testing.T) {
 		t.Error(err)
 	}
 	{
-		rs := res.Get().(ResultSet).Rows[0]
+		rs := res.Rows[0]
 		if rs["1"].Get() != "Charlie Sheen" || rs["2"].Get() != "ACTED_IN" || rs["3"].Get() != "Wall Street" {
 			t.Errorf("Wrong data: %v", rs)
 		}
@@ -575,7 +575,7 @@ func TestMerge(t *testing.T) {
 		t.Error(err)
 	}
 	{
-		rs := res.Get().(ResultSet).Rows[0]
+		rs := res.Rows[0]
 		if !rs["1"].Get().(*lpg.Node).HasLabel("Movie") {
 			t.Errorf("Wrong data: %v", rs)
 		}
@@ -595,7 +595,7 @@ func TestMerge(t *testing.T) {
 		t.Error(err)
 	}
 	{
-		rs := res.Get().(ResultSet).Rows[0]
+		rs := res.Rows[0]
 		if rs["1"].Get().(*lpg.Path).GetEdge(0).GetLabel() != "KNOWS" {
 			t.Errorf("Wrong data: %v", rs)
 		}
@@ -682,7 +682,7 @@ func TestMerge(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	rs := res.Get().(ResultSet).Rows[0]
+	rs := res.Rows[0]
 	if rs["1"].Get().(*lpg.Node).GetLabels().String() != "SPY" {
 		t.Errorf("Wrong data: %v", rs)
 	}
@@ -698,7 +698,7 @@ func TestMerge(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	rs = res.Get().(ResultSet).Rows[0]
+	rs = res.Rows[0]
 	if rs["1"].Get().(*lpg.Node).GetLabels().String() != "SPY" {
 		t.Errorf("Wrong data: %v", rs)
 	}

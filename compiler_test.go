@@ -26,13 +26,12 @@ func runTestMatch(t *testing.T, expr string, g *lpg.Graph) ResultSet {
 		t.Errorf("%s: %s", expr, err)
 		return *NewResultSet()
 	}
-	value, err := ev.Evaluate(ctx)
+	rs, err := ev.GetResultSet(ctx)
 	if err != nil {
 		t.Errorf("%s: %s", expr, err)
-		return *NewResultSet()
 	}
 
-	return value.Get().(ResultSet)
+	return rs
 }
 
 func TestBasicMatch(t *testing.T) {
@@ -87,11 +86,11 @@ func TestBasicMatch(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		value, err := ev.Evaluate(ctx)
+		rs, err := ev.GetResultSet(ctx)
 		if err != nil {
 			t.Error(err)
 		}
-		if len(value.Get().(ResultSet).Rows) != 0 {
+		if len(rs.Rows) != 0 {
 			t.Errorf("Empty result set expected")
 		}
 	}
@@ -131,11 +130,10 @@ func TestQueryChain(t *testing.T) {
 	g.NewEdge(l1_2, l2_2, "edge", nil)
 	g.NewEdge(l1_2, l3_2, "edge", nil)
 
-	v, err := ParseAndEvaluate(`match (root:l1)-[]->(a:l2), (root)-[]->(b:l3) return a as a, b as b`, ctx)
+	rs, err := ParseAndEvaluate(`match (root:l1)-[]->(a:l2), (root)-[]->(b:l3) return a as a, b as b`, ctx)
 	if err != nil {
 		t.Error(err)
 	}
-	rs := v.Get().(ResultSet)
 	if len(rs.Rows) != 2 {
 		t.Errorf("Expecting 2 rows got %d", len(rs.Rows))
 	}

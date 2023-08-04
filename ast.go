@@ -8,18 +8,14 @@ import (
 	"github.com/cloudprivacylabs/opencypher/parser"
 )
 
-type Evaluatable interface {
-	Evaluate(*EvalContext) (Value, error)
-}
-
-type regularQuery struct {
-	singleQuery Evaluatable
-	unions      []union
+type ResultSetProvider interface {
+	GetResultSet(*EvalContext) (ResultSet, error)
 }
 
 type union struct {
-	all         bool
-	singleQuery Evaluatable
+	left  ResultSetProvider
+	all   bool
+	right ResultSetProvider
 }
 
 type singlePartQuery struct {
@@ -77,7 +73,7 @@ type withClause struct {
 
 type multiPartQuery struct {
 	parts       []multiPartQueryPart
-	singleQuery singlePartQuery
+	singleQuery ResultSetProvider
 }
 
 type ReadingClause interface {
@@ -90,7 +86,7 @@ type UpdatingClause interface {
 }
 
 type Expression interface {
-	Evaluatable
+	Evaluate(*EvalContext) (Value, error)
 }
 
 type unwind struct {
@@ -99,21 +95,21 @@ type unwind struct {
 }
 
 type orExpression struct {
-	parts []Evaluatable
+	parts []Expression
 }
 type xorExpression struct {
-	parts []Evaluatable
+	parts []Expression
 }
 type andExpression struct {
-	parts []Evaluatable
+	parts []Expression
 }
 
 type notExpression struct {
 	part Expression
 }
 type comparisonExpression struct {
-	first  Expression
-	second []partialComparisonExpression
+	first Expression
+	rest  []partialComparisonExpression
 }
 
 type partialComparisonExpression struct {
@@ -137,24 +133,24 @@ type multiplyDivideModuloExpression struct {
 type multiplyDivideModuloExpressionPart struct {
 	// For the first element of parts, Op=0
 	op   rune
-	expr Evaluatable
+	expr Expression
 }
 
 type powerOfExpression struct {
-	parts []Evaluatable
+	parts []Expression
 
 	constValue Value
 }
 
 type unaryAddOrSubtractExpression struct {
 	neg  bool
-	expr stringListNullOperatorExpression
+	expr Expression
 
 	constValue Value
 }
 
 type stringListNullOperatorExpression struct {
-	propertyOrLabels propertyOrLabelsExpression
+	propertyOrLabels Expression
 	parts            []stringListNullOperatorExpressionPart
 }
 
@@ -317,7 +313,7 @@ type filterAtom struct {
 }
 
 type atom interface {
-	Evaluatable
+	Expression
 }
 
 type filterExpression struct {
@@ -342,7 +338,7 @@ type functionInvocation struct {
 	args     []Expression
 
 	function       *Function
-	constArgs      []Evaluatable
+	constArgs      []Expression
 	constArgValues []Value
 }
 
@@ -391,46 +387,56 @@ type mapKeyValue struct {
 	value Expression
 }
 
-func oC_Cypher(ctx *parser.OC_CypherContext) Evaluatable {
+func oC_Cypher(ctx *parser.OC_CypherContext) ResultSetProvider {
 	return oC_Statement(ctx.OC_Statement().(*parser.OC_StatementContext))
 }
 
-func oC_Statement(ctx *parser.OC_StatementContext) Evaluatable {
+func oC_Statement(ctx *parser.OC_StatementContext) ResultSetProvider {
 	return oC_Query(ctx.OC_Query().(*parser.OC_QueryContext))
 }
 
-func oC_Query(ctx *parser.OC_QueryContext) Evaluatable {
+func oC_Query(ctx *parser.OC_QueryContext) ResultSetProvider {
 	if x := ctx.OC_RegularQuery(); x != nil {
 		return oC_RegularQuery(x.(*parser.OC_RegularQueryContext))
 	}
 	return oC_StandaloneCall(ctx.OC_StandaloneCall().(*parser.OC_StandaloneCallContext))
 }
 
-func oC_RegularQuery(ctx *parser.OC_RegularQueryContext) regularQuery {
-	ret := regularQuery{
-		singleQuery: oC_SingleQuery(ctx.OC_SingleQuery().(*parser.OC_SingleQueryContext)),
+func oC_RegularQuery(ctx *parser.OC_RegularQueryContext) ResultSetProvider {
+	left := oC_SingleQuery(ctx.OC_SingleQuery().(*parser.OC_SingleQueryContext))
+	allUnions := ctx.AllOC_Union()
+	if len(allUnions) == 0 {
+		return left
 	}
-	for _, u := range ctx.AllOC_Union() {
-		ret.unions = append(ret.unions, oC_Union(u.(*parser.OC_UnionContext)))
+	current := &union{
+		left: left,
 	}
-	return ret
+	top := current
+	for _, u := range allUnions {
+		if current.right != nil {
+			newright := &union{}
+			newright.left = current.right
+			current.right = newright
+			current = newright
+		}
+		uctx := u.(*parser.OC_UnionContext)
+		if uctx.ALL() != nil {
+			current.all = true
+		}
+		current.left = oC_SingleQuery(uctx.OC_SingleQuery().(*parser.OC_SingleQueryContext))
+	}
+
+	return top
 }
 
-func oC_Union(ctx *parser.OC_UnionContext) union {
-	return union{
-		all:         ctx.ALL() != nil,
-		singleQuery: oC_SingleQuery(ctx.OC_SingleQuery().(*parser.OC_SingleQueryContext)),
-	}
-}
-
-func oC_SingleQuery(ctx *parser.OC_SingleQueryContext) Evaluatable {
+func oC_SingleQuery(ctx *parser.OC_SingleQueryContext) ResultSetProvider {
 	if x := ctx.OC_SinglePartQuery(); x != nil {
 		return oC_SinglePartQuery(x.(*parser.OC_SinglePartQueryContext))
 	}
 	return oC_MultiPartQuery(ctx.OC_MultiPartQuery().(*parser.OC_MultiPartQueryContext))
 }
 
-func oC_SinglePartQuery(ctx *parser.OC_SinglePartQueryContext) singlePartQuery {
+func oC_SinglePartQuery(ctx *parser.OC_SinglePartQueryContext) ResultSetProvider {
 	ret := singlePartQuery{}
 	for _, r := range ctx.AllOC_ReadingClause() {
 		ret.read = append(ret.read, oC_ReadingClause(r.(*parser.OC_ReadingClauseContext)))
@@ -445,9 +451,10 @@ func oC_SinglePartQuery(ctx *parser.OC_SinglePartQueryContext) singlePartQuery {
 	return ret
 }
 
-//oC_MultiPartQuery
-//              :  ( ( oC_ReadingClause SP? )* ( oC_UpdatingClause SP? )* oC_With SP? )+ oC_SinglePartQuery ;
-func oC_MultiPartQuery(ctx *parser.OC_MultiPartQueryContext) multiPartQuery {
+// oC_MultiPartQuery
+//
+//	:  ( ( oC_ReadingClause SP? )* ( oC_UpdatingClause SP? )* oC_With SP? )+ oC_SinglePartQuery ;
+func oC_MultiPartQuery(ctx *parser.OC_MultiPartQueryContext) ResultSetProvider {
 	ret := multiPartQuery{parts: []multiPartQueryPart{}}
 	count := ctx.GetChildCount()
 	lastPartIx := -1
@@ -654,20 +661,33 @@ func oC_ComparisonExpression(ctx *parser.OC_ComparisonExpressionContext) Express
 		first: oC_AddOrSubtractExpression(ctx.OC_AddOrSubtractExpression().(*parser.OC_AddOrSubtractExpressionContext)),
 	}
 	for _, x := range ctx.AllOC_PartialComparisonExpression() {
-		ret.second = append(ret.second, oC_PartialComparisonExpression(x.(*parser.OC_PartialComparisonExpressionContext)))
+		ret.rest = append(ret.rest, oC_PartialComparisonExpression(x.(*parser.OC_PartialComparisonExpressionContext)))
 	}
-	if len(ret.second) == 0 {
+	if len(ret.rest) == 0 {
 		return ret.first
 	}
 	return ret
 }
 
+func oC_PartialComparisonExpression(ctx *parser.OC_PartialComparisonExpressionContext) partialComparisonExpression {
+	ret := partialComparisonExpression{expr: oC_AddOrSubtractExpression(ctx.OC_AddOrSubtractExpression().(*parser.OC_AddOrSubtractExpressionContext))}
+	for i := 0; i < ctx.GetChildCount(); i++ {
+		if tok, ok := ctx.GetChild(i).(antlr.TerminalNode); ok {
+			t := tok.GetText()
+			if t == "=" || t == "<>" || t == "<" || t == ">" || t == "<=" || t == "=>" {
+				ret.op = t
+			}
+		}
+	}
+	return ret
+}
+
 // oC_AddOrSubtractExpression :
-//      oC_MultiplyDivideModuloExpression (
-//           ( SP? '+' SP? oC_MultiplyDivideModuloExpression ) |
-//           ( SP? '-' SP? oC_MultiplyDivideModuloExpression )
-//      )*
 //
+//	oC_MultiplyDivideModuloExpression (
+//	     ( SP? '+' SP? oC_MultiplyDivideModuloExpression ) |
+//	     ( SP? '-' SP? oC_MultiplyDivideModuloExpression )
+//	)*
 func oC_AddOrSubtractExpression(ctx *parser.OC_AddOrSubtractExpressionContext) Expression {
 	ret := &addOrSubtractExpression{}
 	target := &ret.add
@@ -695,10 +715,11 @@ func oC_AddOrSubtractExpression(ctx *parser.OC_AddOrSubtractExpressionContext) E
 }
 
 // oC_MultiplyDivideModuloExpression :
-//      oC_PowerOfExpression (
-//          ( SP? '*' SP? oC_PowerOfExpression ) |
-//          ( SP? '/' SP? oC_PowerOfExpression ) |
-//          ( SP? '%' SP? oC_PowerOfExpression ) )* ;
+//
+//	oC_PowerOfExpression (
+//	    ( SP? '*' SP? oC_PowerOfExpression ) |
+//	    ( SP? '/' SP? oC_PowerOfExpression ) |
+//	    ( SP? '%' SP? oC_PowerOfExpression ) )* ;
 func oC_MultiplyDivideModuloExpression(ctx *parser.OC_MultiplyDivideModuloExpressionContext) Expression {
 	ret := &multiplyDivideModuloExpression{}
 	count := ctx.GetChildCount()
@@ -728,8 +749,9 @@ func oC_MultiplyDivideModuloExpression(ctx *parser.OC_MultiplyDivideModuloExpres
 }
 
 // oC_PowerOfExpression :
-//          oC_UnaryAddOrSubtractExpression ( SP? '^' SP? oC_UnaryAddOrSubtractExpression )* ;
-func oC_PowerOfExpression(ctx *parser.OC_PowerOfExpressionContext) Evaluatable {
+//
+//	oC_UnaryAddOrSubtractExpression ( SP? '^' SP? oC_UnaryAddOrSubtractExpression )* ;
+func oC_PowerOfExpression(ctx *parser.OC_PowerOfExpressionContext) Expression {
 	ret := powerOfExpression{}
 	for _, x := range ctx.AllOC_UnaryAddOrSubtractExpression() {
 		ret.parts = append(ret.parts, oC_UnaryAddOrSubtractExpression(x.(*parser.OC_UnaryAddOrSubtractExpressionContext)))
@@ -740,7 +762,7 @@ func oC_PowerOfExpression(ctx *parser.OC_PowerOfExpressionContext) Evaluatable {
 	return &ret
 }
 
-func oC_UnaryAddOrSubtractExpression(ctx *parser.OC_UnaryAddOrSubtractExpressionContext) Evaluatable {
+func oC_UnaryAddOrSubtractExpression(ctx *parser.OC_UnaryAddOrSubtractExpressionContext) Expression {
 	ret := unaryAddOrSubtractExpression{}
 	for child := 0; child < ctx.GetChildCount(); child++ {
 		ch := ctx.GetChild(child)
@@ -829,19 +851,6 @@ func oC_PropertyOrLabelsExpression(ctx *parser.OC_PropertyOrLabelsExpressionCont
 	if l := ctx.OC_NodeLabels(); l != nil {
 		x := oC_NodeLabels(l.(*parser.OC_NodeLabelsContext))
 		ret.nodeLabels = &x
-	}
-	return ret
-}
-
-func oC_PartialComparisonExpression(ctx *parser.OC_PartialComparisonExpressionContext) partialComparisonExpression {
-	ret := partialComparisonExpression{expr: oC_AddOrSubtractExpression(ctx.OC_AddOrSubtractExpression().(*parser.OC_AddOrSubtractExpressionContext))}
-	for i := 0; i < ctx.GetChildCount(); i++ {
-		if tok, ok := ctx.GetChild(i).(antlr.TerminalNode); ok {
-			t := tok.GetText()
-			if t == "=" || t == "<>" || t == "<" || t == ">" || t == "<=" || t == "=>" {
-				ret.op = t
-			}
-		}
 	}
 	return ret
 }
@@ -1170,7 +1179,7 @@ func oC_FilterExpression(ctx *parser.OC_FilterExpressionContext) filterExpressio
 	return ret
 }
 
-//oC_RelationshipsPattern   :  oC_NodePattern ( SP? oC_PatternElementChain )+ ;
+// oC_RelationshipsPattern   :  oC_NodePattern ( SP? oC_PatternElementChain )+ ;
 // oC_PatternElementChain :  oC_RelationshipPattern SP? oC_NodePattern ;
 func oC_RelationshipsPattern(ctx *parser.OC_RelationshipsPatternContext) relationshipsPattern {
 	ret := relationshipsPattern{
@@ -1268,7 +1277,7 @@ func oC_CaseAlternatives(ctx *parser.OC_CaseAlternativesContext) caseAlternative
 	}
 }
 
-func oC_Literal(ctx *parser.OC_LiteralContext) Evaluatable {
+func oC_Literal(ctx *parser.OC_LiteralContext) Expression {
 	if ctx.NULL() != nil {
 		return nullLiteral{}
 	}
@@ -1288,7 +1297,7 @@ func oC_Literal(ctx *parser.OC_LiteralContext) Evaluatable {
 	return oC_ListLiteral(ctx.OC_ListLiteral().(*parser.OC_ListLiteralContext))
 }
 
-func oC_NumberLiteral(ctx *parser.OC_NumberLiteralContext) Evaluatable {
+func oC_NumberLiteral(ctx *parser.OC_NumberLiteralContext) Expression {
 	if d := ctx.OC_DoubleLiteral(); d != nil {
 		return oC_DoubleLiteral(d.(*parser.OC_DoubleLiteralContext))
 	}
@@ -1425,6 +1434,6 @@ func oC_InQueryCall(ctx *parser.OC_InQueryCallContext) ReadingClause {
 	panic("Unsupported: inQueryCall")
 }
 
-func oC_StandaloneCall(ctx *parser.OC_StandaloneCallContext) Evaluatable {
+func oC_StandaloneCall(ctx *parser.OC_StandaloneCallContext) ResultSetProvider {
 	panic("Unsupported: standaloneCall")
 }

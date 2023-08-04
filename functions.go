@@ -12,7 +12,7 @@ type Function struct {
 	Name      string
 	MinArgs   int
 	MaxArgs   int
-	Func      func(*EvalContext, []Evaluatable) (Value, error)
+	Func      func(*EvalContext, []Expression) (Value, error)
 	ValueFunc func(*EvalContext, []Value) (Value, error)
 }
 
